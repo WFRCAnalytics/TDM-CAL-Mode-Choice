@@ -1,0 +1,51 @@
+[
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "Calculating the Mode Choice Calibration Parameters",
+    "section": "",
+    "text": "This section prepares the Python environment with all necessary libraries and configurations. We’ll import data manipulation libraries (pandas, numpy), and visualization tools (matplotlib, seaborn).\n\n\n!conda install -c conda-forge numpy pandas matplotlib seaborn requests pathlib BigQuery\n\n\n\n\n\nShow the code\nimport pandas as pd\nimport numpy as np\nimport matplotlib.pyplot as plt\nimport seaborn as sns\nfrom pathlib import Path\n\nimport os\nimport requests\nimport io\nfrom dotenv import load_dotenv\nload_dotenv()\n\n\nTrue\n\n\n\n\n\n\n\nShow the code\n# import global TDM functions\nimport sys\nsys.path.insert(0, '../Resources/2-Python/global-functions')\nimport BigQuery\n\nclient = BigQuery.getBigQueryClient_Confidential2023UtahHTS()\n\n\npukar.bhandari\nC:/Users/Pukar.Bhandari/.private/confidential-2023-utah-hts-5fd7ddd219a7.json\n\n\n\n\n\n\n\n\n\n\nShow the code\nimport os\nimport requests\n\ndef fetch_github(\n    url: str,\n    mode: str = \"private\",\n    token_env_var: str = \"GITHUB_TOKEN\"\n) -&gt; requests.Response:\n    \"\"\"\n    Fetch content from GitHub repositories.\n\n    Args:\n        url: GitHub raw URL (e.g., https://raw.githubusercontent.com/...)\n        mode: \"public\" for public repos, \"private\" for private repos requiring authentication\n        token_env_var: Name of environment variable containing GitHub token (default: GITHUB_TOKEN)\n\n    Returns:\n        requests.Response object\n\n    Raises:\n        ValueError: If token is missing for private mode or invalid mode\n        requests.HTTPError: If request fails\n    \"\"\"\n    # Validate mode\n    if mode not in [\"public\", \"private\"]:\n        raise ValueError(f\"mode must be 'public' or 'private', got '{mode}'\")\n\n    if mode == \"public\":\n        response = requests.get(url, timeout=30)\n    else:\n        token = os.getenv(token_env_var)\n        if not token:\n            raise ValueError(\n                f\"GitHub token not found in environment variable '{token_env_var}'. \"\n                f\"Check your .env file has: {token_env_var}=your_token_here\"\n            )\n\n        headers = {\n            'Authorization': f'token {token}',\n            'Accept': 'application/vnd.github.v3.raw'\n        }\n        response = requests.get(url, headers=headers, timeout=30)\n\n    response.raise_for_status()\n    return response"
+  },
+  {
+    "objectID": "index.html#install-libraries",
+    "href": "index.html#install-libraries",
+    "title": "Calculating the Mode Choice Calibration Parameters",
+    "section": "",
+    "text": "!conda install -c conda-forge numpy pandas matplotlib seaborn requests pathlib BigQuery"
+  },
+  {
+    "objectID": "index.html#import-libraries",
+    "href": "index.html#import-libraries",
+    "title": "Calculating the Mode Choice Calibration Parameters",
+    "section": "",
+    "text": "Show the code\nimport pandas as pd\nimport numpy as np\nimport matplotlib.pyplot as plt\nimport seaborn as sns\nfrom pathlib import Path\n\nimport os\nimport requests\nimport io\nfrom dotenv import load_dotenv\nload_dotenv()\n\n\nTrue"
+  },
+  {
+    "objectID": "index.html#setup-bigquery",
+    "href": "index.html#setup-bigquery",
+    "title": "Calculating the Mode Choice Calibration Parameters",
+    "section": "",
+    "text": "Show the code\n# import global TDM functions\nimport sys\nsys.path.insert(0, '../Resources/2-Python/global-functions')\nimport BigQuery\n\nclient = BigQuery.getBigQueryClient_Confidential2023UtahHTS()\n\n\npukar.bhandari\nC:/Users/Pukar.Bhandari/.private/confidential-2023-utah-hts-5fd7ddd219a7.json"
+  },
+  {
+    "objectID": "index.html#helper-functions",
+    "href": "index.html#helper-functions",
+    "title": "Calculating the Mode Choice Calibration Parameters",
+    "section": "",
+    "text": "Show the code\nimport os\nimport requests\n\ndef fetch_github(\n    url: str,\n    mode: str = \"private\",\n    token_env_var: str = \"GITHUB_TOKEN\"\n) -&gt; requests.Response:\n    \"\"\"\n    Fetch content from GitHub repositories.\n\n    Args:\n        url: GitHub raw URL (e.g., https://raw.githubusercontent.com/...)\n        mode: \"public\" for public repos, \"private\" for private repos requiring authentication\n        token_env_var: Name of environment variable containing GitHub token (default: GITHUB_TOKEN)\n\n    Returns:\n        requests.Response object\n\n    Raises:\n        ValueError: If token is missing for private mode or invalid mode\n        requests.HTTPError: If request fails\n    \"\"\"\n    # Validate mode\n    if mode not in [\"public\", \"private\"]:\n        raise ValueError(f\"mode must be 'public' or 'private', got '{mode}'\")\n\n    if mode == \"public\":\n        response = requests.get(url, timeout=30)\n    else:\n        token = os.getenv(token_env_var)\n        if not token:\n            raise ValueError(\n                f\"GitHub token not found in environment variable '{token_env_var}'. \"\n                f\"Check your .env file has: {token_env_var}=your_token_here\"\n            )\n\n        headers = {\n            'Authorization': f'token {token}',\n            'Accept': 'application/vnd.github.v3.raw'\n        }\n        response = requests.get(url, headers=headers, timeout=30)\n\n    response.raise_for_status()\n    return response"
+  },
+  {
+    "objectID": "index.html#uta-on-board-survey",
+    "href": "index.html#uta-on-board-survey",
+    "title": "Calculating the Mode Choice Calibration Parameters",
+    "section": "2.1 UTA On-Board Survey",
+    "text": "2.1 UTA On-Board Survey\n\n\nShow the code\nresponse = fetch_github(\n    \"https://raw.githubusercontent.com/WFRCAnalytics/DATA-OBS-Prep-For-TDM/refs/heads/main/_output/UTA_OBS_2024_Processed.csv\"\n)\ndf_obs_processed = pd.read_csv(io.StringIO(response.text))\n\n\nC:\\Users\\Pukar.Bhandari\\AppData\\Local\\Temp\\ipykernel_33112\\566214103.py:4: DtypeWarning: Columns (8,24,32,37,54,132,137,174) have mixed types. Specify dtype option on import or set low_memory=False.\n  df_obs_processed = pd.read_csv(io.StringIO(response.text))"
+  },
+  {
+    "objectID": "index.html#household-travel-survey",
+    "href": "index.html#household-travel-survey",
+    "title": "Calculating the Mode Choice Calibration Parameters",
+    "section": "2.2 Household Travel Survey",
+    "text": "2.2 Household Travel Survey\n\n\nShow the code\nhts_hh_23 = client.query(\"SELECT * FROM \" + 'wfrc-modeling-data.prd_tdm_hts_2023.hh').to_dataframe()\n\nhts_hh_23\n\n\n\n\n\n\n\n\n\nhh_id\nparticipation_group\nis_complete\nis_survey_complete\nnum_days_complete\nnum_days_survey_complete\nnum_days_complete_weekday\nnum_days_survey_complete_weekday\nnum_complete_mon\nnum_survey_complete_mon\n...\nnum_vehicles_4cat\nautosuf_wk\nlifecycle\nhh_children\nhh_adults\nhh_seniors\nhh_weight_col_enrol\nhh_weight\nhCO_TAZID_USTMv3\nhCO_TAZID_USTMv4\n\n\n\n\n0\n23472690\n9\n0\n1\n0\n7\n0\n5\n0\n1\n...\n3\nSufficient\n2\n1\n3\n0\nNaN\nNaN\n3087\n3087\n\n\n1\n23307416\n9\n0\n1\n0\n7\n0\n5\n0\n1\n...\n3\nSufficient\n2\n4\n3\n0\nNaN\nNaN\n3111\n3111\n\n\n2\n23317145\n9\n0\n1\n0\n7\n0\n5\n0\n1\n...\n2\nSufficient\n2\n2\n2\n0\nNaN\nNaN\n3231\n3231\n\n\n3\n23321176\n9\n0\n1\n0\n5\n0\n5\n0\n1\n...\n2\nSufficient\n3\n0\n0\n1\nNaN\nNaN\n3254\n3254\n\n\n4\n23345703\n9\n0\n1\n0\n1\n0\n1\n0\n0\n...\n2\nSufficient\n1\n0\n2\n0\nNaN\nNaN\n7001\n7001\n\n\n...\n...\n...\n...\n...\n...\n...\n...\n...\n...\n...\n...\n...\n...\n...\n...\n...\n...\n...\n...\n...\n...\n\n\n11178\n23165031\n9\n1\n1\n7\n7\n5\n5\n1\n1\n...\n1\nSufficient\n1\n0\n1\n0\nNaN\n152.530720\n570407\n570407\n\n\n11179\n23046966\n9\n1\n1\n7\n7\n5\n5\n1\n1\n...\n1\nSufficient\n1\n0\n1\n0\nNaN\n98.388626\n570415\n570415\n\n\n11180\n23043011\n9\n1\n1\n7\n7\n5\n5\n1\n1\n...\n1\nSufficient\n1\n0\n2\n0\nNaN\n28.238022\n570417\n570417\n\n\n11181\n23376736\n9\n1\n1\n7\n7\n5\n5\n1\n1\n...\n1\nSufficient\n3\n0\n0\n1\nNaN\n135.715400\n570419\n570419\n\n\n11182\n23085912\n9\n1\n1\n7\n7\n5\n5\n1\n1\n...\n3\nSufficient\n3\n0\n0\n2\nNaN\n51.868473\n570419\n570419\n\n\n\n\n11183 rows × 123 columns\n\n\n\n\n\nShow the code\nhts_person_23 = client.query(\"SELECT * FROM \" + 'wfrc-modeling-data.prd_tdm_hts_2023.person').to_dataframe()\n\nhts_person_23\n\n\n\n\n\n\n\n\n\nhh_id\nis_complete\nis_survey_complete\nnum_trips\nperson_id\nperson_num\nsurveyable\nis_participant\nrelationship\nage\n...\nlifegroup\nage_3cat\nadultJobs\nseniorJobs\nchildJobs\nperson_made_trips\ndrive_work_trips\ndrive_work_distance\nperson_weight_col_enrol\nperson_weight\n\n\n\n\n0\n23483793\n1\n1\n6\n2348379307\n7\n1\n1\n3\n6\n...\nadult\n2.0\n1\n0\n0\n1\n3\n75.313295\nNaN\n299.938780\n\n\n1\n23233210\n1\n1\n2\n2323321004\n4\n1\n1\n4\n4\n...\nNone\nNaN\n1\n0\n0\n1\n1\n12.921414\n0.0\nNaN\n\n\n2\n23252082\n1\n1\n2\n2325208202\n2\n1\n1\n3\n8\n...\nadult\n2.0\n1\n0\n0\n1\n1\n19.289847\nNaN\n599.010600\n\n\n3\n23085731\n1\n1\n18\n2308573101\n1\n1\n1\n0\n6\n...\nadult\n2.0\n1\n0\n0\n1\n0\n0.000000\nNaN\n278.218930\n\n\n4\n23238026\n1\n1\n5\n2323802603\n3\n1\n1\n3\n6\n...\nNone\nNaN\n1\n0\n0\n1\n1\n6.861802\n0.0\nNaN\n\n\n...\n...\n...\n...\n...\n...\n...\n...\n...\n...\n...\n...\n...\n...\n...\n...\n...\n...\n...\n...\n...\n...\n\n\n13884\n23356285\n1\n1\n12\n2335628501\n1\n1\n1\n0\n8\n...\nadult\n2.0\n2\n0\n0\n1\n0\n0.000000\nNaN\n111.541504\n\n\n13885\n23346608\n1\n1\n0\n2334660803\n3\n1\n1\n2\n4\n...\nadult\n2.0\n1\n0\n0\n0\n0\n0.000000\nNaN\n83.666885\n\n\n13886\n23186778\n1\n1\n2\n2318677801\n1\n1\n1\n0\n5\n...\nadult\n2.0\n1\n0\n0\n1\n0\n0.000000\nNaN\n228.358470\n\n\n13887\n23371593\n1\n1\n36\n2337159303\n3\n1\n1\n3\n8\n...\nadult\n2.0\n1\n0\n0\n1\n0\n0.000000\nNaN\nNaN\n\n\n13888\n23350564\n1\n1\n52\n2335056401\n1\n1\n1\n0\n6\n...\nadult\n2.0\n1\n0\n0\n1\n0\n0.000000\nNaN\n184.878130\n\n\n\n\n29873 rows × 126 columns"
+  }
+]
