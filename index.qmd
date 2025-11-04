@@ -1,0 +1,129 @@
+---
+title: Calculating the Mode Choice Calibration Parameters
+subtitle: Using Household Travel Survey and UTA On-Board Survey Data
+description: Lorem Ipsum
+author:
+ - name: Pukar Bhandari
+   email: pukar.bhandari@wfrc.utah.gov
+   affiliation:
+     - name: Wasatch Front Regional Council
+       url: "https://wfrc.utah.gov/"
+date: "2025-11-03"
+---
+
+# Setup Environment
+
+This section prepares the Python environment with all necessary libraries and configurations. We'll import data manipulation libraries (pandas, numpy), and visualization tools (matplotlib, seaborn).
+
+## Install Libraries
+
+```python
+!conda install -c conda-forge numpy pandas matplotlib seaborn requests pathlib BigQuery
+```
+
+## Import Libraries
+
+```{python}
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from pathlib import Path
+
+import os
+import requests
+import io
+from dotenv import load_dotenv
+load_dotenv()
+```
+
+## Setup BigQuery
+
+```{python}
+# import global TDM functions
+import sys
+sys.path.insert(0, '../Resources/2-Python/global-functions')
+import BigQuery
+
+client = BigQuery.getBigQueryClient_Confidential2023UtahHTS()
+```
+
+## Environment Variables
+
+
+
+## Helper Functions
+
+```{python}
+import os
+import requests
+
+def fetch_github(
+    url: str,
+    mode: str = "private",
+    token_env_var: str = "GITHUB_TOKEN"
+) -> requests.Response:
+    """
+    Fetch content from GitHub repositories.
+
+    Args:
+        url: GitHub raw URL (e.g., https://raw.githubusercontent.com/...)
+        mode: "public" for public repos, "private" for private repos requiring authentication
+        token_env_var: Name of environment variable containing GitHub token (default: GITHUB_TOKEN)
+
+    Returns:
+        requests.Response object
+
+    Raises:
+        ValueError: If token is missing for private mode or invalid mode
+        requests.HTTPError: If request fails
+    """
+    # Validate mode
+    if mode not in ["public", "private"]:
+        raise ValueError(f"mode must be 'public' or 'private', got '{mode}'")
+
+    if mode == "public":
+        response = requests.get(url, timeout=30)
+    else:
+        token = os.getenv(token_env_var)
+        if not token:
+            raise ValueError(
+                f"GitHub token not found in environment variable '{token_env_var}'. "
+                f"Check your .env file has: {token_env_var}=your_token_here"
+            )
+
+        headers = {
+            'Authorization': f'token {token}',
+            'Accept': 'application/vnd.github.v3.raw'
+        }
+        response = requests.get(url, headers=headers, timeout=30)
+
+    response.raise_for_status()
+    return response
+```
+
+# Load Data
+
+## UTA On-Board Survey
+
+```{python}
+response = fetch_github(
+    "https://raw.githubusercontent.com/WFRCAnalytics/DATA-OBS-Prep-For-TDM/refs/heads/main/_output/UTA_OBS_2024_Processed.csv"
+)
+df_obs_processed = pd.read_csv(io.StringIO(response.text))
+```
+
+## Household Travel Survey
+
+```{python}
+hts_hh_23 = client.query("SELECT * FROM " + 'wfrc-modeling-data.prd_tdm_hts_2023.hh').to_dataframe()
+
+hts_hh_23
+```
+
+
+```{python}
+hts_person_23 = client.query("SELECT * FROM " + 'wfrc-modeling-data.prd_tdm_hts_2023.person').to_dataframe()
+
+hts_person_23
+```
