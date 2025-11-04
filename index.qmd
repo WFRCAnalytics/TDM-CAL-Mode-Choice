@@ -157,6 +157,93 @@ df_hts_person23 = client.query(
 df_hts_person23
 ```
 
+# Understanding Mode Hierarchy
+
+```{mermaid}
+flowchart LR
+  T["🚦 Total Trips"]
+
+  %% Top-level split
+  T --> M["Motorized"]
+  T --> NM["Non-motorized"]
+
+  %% Motorized branch
+  subgraph S1["🚗 Motorized Transportation"]
+    direction TB
+    M --> A["Auto"]
+    M --> TR["Transit"]
+
+    %% Auto
+    A --> DA["Drive alone"]
+    A --> SR["Shared ride"]
+    SR --> SR2["SR2<br/><i>2 people</i>"]
+    SR --> SR3["SR3<br/><i>3+ people</i>"]
+
+    %% Transit (two complementary views)
+    subgraph S1a["🚌 Transit – By Service Type"]
+      direction TB
+      TR --> TM["By modes"]
+      TM --> LB["Local bus"]
+      TM --> CB["Core bus"]
+      TM --> EB["Express bus"]
+      TM --> LRT["LRT<br/><i>light rail</i>"]
+      TM --> CRT["CRT<br/><i>commuter rail</i>"]
+      TM --> BRT["BRT<br/><i>bus rapid</i>"]
+    end
+
+    subgraph S1b["🚶🚗 Transit – By Access Type"]
+      direction TB
+      TR --> TA["By access type"]
+
+      %% Walk-to-transit
+      TA --> WTT["🚶 Walk-to-transit"]
+      WTT --> WLB["Walk → Local bus"]
+      WTT --> WCB["Walk → Core bus"]
+      WTT --> WEB["Walk → Express bus"]
+      WTT --> WLRT["Walk → LRT"]
+      WTT --> WCRT["Walk → CRT"]
+      WTT --> WBRT["Walk → BRT"]
+
+      %% Drive-to-transit
+      TA --> DTT["🚗 Drive-to-transit"]
+      DTT --> DLB["Drive → Local bus"]
+      DTT --> DCB["Drive → Core bus"]
+      DTT --> DEB["Drive → Express bus"]
+      DTT --> DLRT["Drive → LRT"]
+      DTT --> DCRT["Drive → CRT"]
+      DTT --> DBRT["Drive → BRT"]
+    end
+  end
+
+  %% Non-motorized branch
+  subgraph S2["🚶 Non-motorized Transportation"]
+    direction TB
+    NM --> WALK["Walk"]
+    NM --> BIKE["Bike"]
+  end
+
+  %% Styling
+  classDef rootNode fill:#2c3e50,stroke:#34495e,stroke-width:3px,color:#fff,font-weight:bold,font-size:16px
+  classDef motorizedNode fill:#3498db,stroke:#2980b9,stroke-width:2px,color:#fff,font-weight:bold
+  classDef nonMotorizedNode fill:#27ae60,stroke:#229954,stroke-width:2px,color:#fff,font-weight:bold
+  classDef autoNode fill:#e67e22,stroke:#d35400,stroke-width:2px,color:#fff
+  classDef transitNode fill:#9b59b6,stroke:#8e44ad,stroke-width:2px,color:#fff
+  classDef walkTransitNode fill:#1abc9c,stroke:#16a085,stroke-width:2px,color:#fff
+  classDef driveTransitNode fill:#e74c3c,stroke:#c0392b,stroke-width:2px,color:#fff
+  classDef leafNode fill:#ecf0f1,stroke:#95a5a6,stroke-width:1px,color:#2c3e50
+  classDef subgraphStyle fill:#f8f9fa,stroke:#dee2e6,stroke-width:2px
+
+  class T rootNode
+  class M motorizedNode
+  class NM nonMotorizedNode
+  class A,DA,SR,SR2,SR3 autoNode
+  class TR,TM,TA transitNode
+  class WTT,WLB,WCB,WEB,WLRT,WCRT,WBRT walkTransitNode
+  class DTT,DLB,DCB,DEB,DLRT,DCRT,DBRT driveTransitNode
+  class LB,CB,EB,LRT,CRT,BRT,WALK,BIKE leafNode
+```
+
+
 # Identify Variable of Interest
 
 ## On-Board Survey
@@ -184,3 +271,5 @@ df_obs_processed["Ac_Mode_Model"].value_counts() # Motorized (Drive) vs Non-moto
 ```{python}
 df_obs_processed["Veh_Cat3p"].value_counts() # Vehile Ownership Category: 0, 1, 2, 3+
 ```
+
+## Household Travel Survey

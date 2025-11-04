@@ -111,6 +111,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     "search-label": "Search"
   }
 }</script>
+<script src="site_libs/quarto-diagram/mermaid.min.js"></script>
+<script src="site_libs/quarto-diagram/mermaid-init.js"></script>
+<link href="site_libs/quarto-diagram/mermaid.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/requirejs@2.3.6/require.min.js" integrity="sha384-c9c+LnTbwQ3aujuU7ULEPVvgLs+Fn6fJUvIGTsuu1ZcCf11fiEubah0ttpca4ntM sha384-6V1/AdqZRWk1KAlWbKBlGhN7VG4iE/yAZcO6NZPMF8od0vukrvr0tg4qY6NSrItx" crossorigin="anonymous"></script>
 
 <script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
@@ -367,14 +370,25 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <ul class="collapse">
   <li><a href="#install-libraries" id="toc-install-libraries" class="nav-link" data-scroll-target="#install-libraries"><span class="header-section-number">1.1</span> Install Libraries</a></li>
   <li><a href="#import-libraries" id="toc-import-libraries" class="nav-link" data-scroll-target="#import-libraries"><span class="header-section-number">1.2</span> Import Libraries</a></li>
-  <li><a href="#setup-bigquery" id="toc-setup-bigquery" class="nav-link" data-scroll-target="#setup-bigquery"><span class="header-section-number">1.3</span> Setup BigQuery</a></li>
-  <li><a href="#environment-variables" id="toc-environment-variables" class="nav-link" data-scroll-target="#environment-variables"><span class="header-section-number">1.4</span> Environment Variables</a></li>
-  <li><a href="#helper-functions" id="toc-helper-functions" class="nav-link" data-scroll-target="#helper-functions"><span class="header-section-number">1.5</span> Helper Functions</a></li>
+  <li><a href="#environment-variables" id="toc-environment-variables" class="nav-link" data-scroll-target="#environment-variables"><span class="header-section-number">1.3</span> Environment Variables</a></li>
+  <li><a href="#helper-functions" id="toc-helper-functions" class="nav-link" data-scroll-target="#helper-functions"><span class="header-section-number">1.4</span> Helper Functions</a></li>
+  <li><a href="#setup-bigquery" id="toc-setup-bigquery" class="nav-link" data-scroll-target="#setup-bigquery"><span class="header-section-number">1.5</span> Setup BigQuery</a></li>
   </ul></li>
   <li><a href="#load-data" id="toc-load-data" class="nav-link" data-scroll-target="#load-data"><span class="header-section-number">2</span> Load Data</a>
   <ul class="collapse">
   <li><a href="#uta-on-board-survey" id="toc-uta-on-board-survey" class="nav-link" data-scroll-target="#uta-on-board-survey"><span class="header-section-number">2.1</span> UTA On-Board Survey</a></li>
   <li><a href="#household-travel-survey" id="toc-household-travel-survey" class="nav-link" data-scroll-target="#household-travel-survey"><span class="header-section-number">2.2</span> Household Travel Survey</a></li>
+  </ul></li>
+  <li><a href="#understanding-mode-hierarchy" id="toc-understanding-mode-hierarchy" class="nav-link" data-scroll-target="#understanding-mode-hierarchy"><span class="header-section-number">3</span> Understanding Mode Hierarchy</a></li>
+  <li><a href="#identify-variable-of-interest" id="toc-identify-variable-of-interest" class="nav-link" data-scroll-target="#identify-variable-of-interest"><span class="header-section-number">4</span> Identify Variable of Interest</a>
+  <ul class="collapse">
+  <li><a href="#on-board-survey" id="toc-on-board-survey" class="nav-link" data-scroll-target="#on-board-survey"><span class="header-section-number">4.1</span> On-Board Survey</a>
+  <ul class="collapse">
+  <li><a href="#trip-purposes" id="toc-trip-purposes" class="nav-link" data-scroll-target="#trip-purposes">Trip Purposes</a></li>
+  <li><a href="#peak-vs-off-peak" id="toc-peak-vs-off-peak" class="nav-link" data-scroll-target="#peak-vs-off-peak">Peak vs Off-Peak</a></li>
+  <li><a href="#motorized-vs-non-motorized" id="toc-motorized-vs-non-motorized" class="nav-link" data-scroll-target="#motorized-vs-non-motorized">Motorized vs Non-motorized</a></li>
+  <li><a href="#vehicle-ownership" id="toc-vehicle-ownership" class="nav-link" data-scroll-target="#vehicle-ownership">Vehicle Ownership</a></li>
+  </ul></li>
   </ul></li>
   </ul>
 </nav>
@@ -396,37 +410,100 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="import-libraries" class="level2" data-number="1.2">
 <h2 data-number="1.2" class="anchored" data-anchor-id="import-libraries"><span class="header-section-number">1.2</span> Import Libraries</h2>
-<div id="bac12d5d" class="cell" data-execution_count="1">
+<div id="f47f0c5d" class="cell" data-execution_count="1">
 <details class="code-fold">
 <summary>Show the code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
 <span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> seaborn <span class="im">as</span> sns</span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pathlib <span class="im">import</span> Path</span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> requests</span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> io</span>
-<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> dotenv <span class="im">import</span> load_dotenv</span>
-<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>load_dotenv()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> importlib.util</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pathlib <span class="im">import</span> Path</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> sys</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> requests</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> io</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> dotenv <span class="im">import</span> load_dotenv</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>load_dotenv()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
-<div class="cell-output cell-output-display" data-execution_count="1">
+<div class="cell-output cell-output-display" data-execution_count="11">
 <pre><code>True</code></pre>
 </div>
 </div>
 </section>
-<section id="setup-bigquery" class="level2" data-number="1.3">
-<h2 data-number="1.3" class="anchored" data-anchor-id="setup-bigquery"><span class="header-section-number">1.3</span> Setup BigQuery</h2>
-<div id="3e4d9aa9" class="cell" data-execution_count="2">
+<section id="environment-variables" class="level2" data-number="1.3">
+<h2 data-number="1.3" class="anchored" data-anchor-id="environment-variables"><span class="header-section-number">1.3</span> Environment Variables</h2>
+</section>
+<section id="helper-functions" class="level2" data-number="1.4">
+<h2 data-number="1.4" class="anchored" data-anchor-id="helper-functions"><span class="header-section-number">1.4</span> Helper Functions</h2>
+<div id="3b6af275" class="cell" data-execution_count="2">
 <details class="code-fold">
 <summary>Show the code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># import global TDM functions</span></span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> sys</span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>sys.path.insert(<span class="dv">0</span>, <span class="st">'../Resources/2-Python/global-functions'</span>)</span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> BigQuery</span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>client <span class="op">=</span> BigQuery.getBigQueryClient_Confidential2023UtahHTS()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> fetch_github(</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    url: <span class="bu">str</span>,</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    mode: <span class="bu">str</span> <span class="op">=</span> <span class="st">"private"</span>,</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    token_env_var: <span class="bu">str</span> <span class="op">=</span> <span class="st">"GITHUB_TOKEN"</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>) <span class="op">-&gt;</span> requests.Response:</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="co">    Fetch content from GitHub repositories.</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="co">    Args:</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="co">        url: GitHub raw URL (e.g., https://raw.githubusercontent.com/...)</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="co">        mode: "public" for public repos, "private" for private repos requiring authentication</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a><span class="co">        token_env_var: Name of environment variable containing GitHub token (default: GITHUB_TOKEN)</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a><span class="co">    Returns:</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a><span class="co">        requests.Response object</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a><span class="co">    Raises:</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a><span class="co">        ValueError: If token is missing for private mode or invalid mode</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a><span class="co">        requests.HTTPError: If request fails</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a><span class="co">    """</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Validate mode</span></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> mode <span class="kw">not</span> <span class="kw">in</span> [<span class="st">"public"</span>, <span class="st">"private"</span>]:</span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>        <span class="cf">raise</span> <span class="pp">ValueError</span>(<span class="ss">f"mode must be 'public' or 'private', got '</span><span class="sc">{</span>mode<span class="sc">}</span><span class="ss">'"</span>)</span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> mode <span class="op">==</span> <span class="st">"public"</span>:</span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>        response <span class="op">=</span> requests.get(url, timeout<span class="op">=</span><span class="dv">30</span>)</span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a>        token <span class="op">=</span> os.getenv(token_env_var)</span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="kw">not</span> token:</span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a>            <span class="cf">raise</span> <span class="pp">ValueError</span>(</span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a>                <span class="ss">f"GitHub token not found in environment variable '</span><span class="sc">{</span>token_env_var<span class="sc">}</span><span class="ss">'. "</span></span>
+<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a>                <span class="ss">f"Check your .env file has: </span><span class="sc">{</span>token_env_var<span class="sc">}</span><span class="ss">=your_token_here"</span></span>
+<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a>            )</span>
+<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-35"><a href="#cb4-35" aria-hidden="true" tabindex="-1"></a>        headers <span class="op">=</span> {</span>
+<span id="cb4-36"><a href="#cb4-36" aria-hidden="true" tabindex="-1"></a>            <span class="st">'Authorization'</span>: <span class="ss">f'token </span><span class="sc">{</span>token<span class="sc">}</span><span class="ss">'</span>,</span>
+<span id="cb4-37"><a href="#cb4-37" aria-hidden="true" tabindex="-1"></a>            <span class="st">'Accept'</span>: <span class="st">'application/vnd.github.v3.raw'</span></span>
+<span id="cb4-38"><a href="#cb4-38" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb4-39"><a href="#cb4-39" aria-hidden="true" tabindex="-1"></a>        response <span class="op">=</span> requests.get(url, headers<span class="op">=</span>headers, timeout<span class="op">=</span><span class="dv">30</span>)</span>
+<span id="cb4-40"><a href="#cb4-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-41"><a href="#cb4-41" aria-hidden="true" tabindex="-1"></a>    response.raise_for_status()</span>
+<span id="cb4-42"><a href="#cb4-42" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> response</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+</section>
+<section id="setup-bigquery" class="level2" data-number="1.5">
+<h2 data-number="1.5" class="anchored" data-anchor-id="setup-bigquery"><span class="header-section-number">1.5</span> Setup BigQuery</h2>
+<div id="5d9704e1" class="cell" data-execution_count="4">
+<details class="code-fold">
+<summary>Show the code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># # Import global TDM functions from remote 'Resource' repo</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Fetch and import BigQuery module</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>response <span class="op">=</span> fetch_github(</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="st">'https://raw.githubusercontent.com/WFRCAnalytics/Resources/refs/heads/master/2-Python/global-functions/BigQuery.py'</span>,</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    mode<span class="op">=</span><span class="st">"public"</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>BigQuery <span class="op">=</span> importlib.util.module_from_spec(importlib.util.spec_from_loader(<span class="st">'BigQuery'</span>, loader<span class="op">=</span><span class="va">None</span>))</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="bu">exec</span>(response.text, BigQuery.__dict__)</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Initiatlize BigQuery Client</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>client <span class="op">=</span> BigQuery.getBigQueryClient_Confidential2023UtahHTS()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code>pukar.bhandari
@@ -434,91 +511,344 @@ C:/Users/Pukar.Bhandari/.private/confidential-2023-utah-hts-5fd7ddd219a7.json</c
 </div>
 </div>
 </section>
-<section id="environment-variables" class="level2" data-number="1.4">
-<h2 data-number="1.4" class="anchored" data-anchor-id="environment-variables"><span class="header-section-number">1.4</span> Environment Variables</h2>
-</section>
-<section id="helper-functions" class="level2" data-number="1.5">
-<h2 data-number="1.5" class="anchored" data-anchor-id="helper-functions"><span class="header-section-number">1.5</span> Helper Functions</h2>
-<div id="2caa902b" class="cell" data-execution_count="3">
-<details class="code-fold">
-<summary>Show the code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> requests</span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> fetch_github(</span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    url: <span class="bu">str</span>,</span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    mode: <span class="bu">str</span> <span class="op">=</span> <span class="st">"private"</span>,</span>
-<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>    token_env_var: <span class="bu">str</span> <span class="op">=</span> <span class="st">"GITHUB_TOKEN"</span></span>
-<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>) <span class="op">-&gt;</span> requests.Response:</span>
-<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""</span></span>
-<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a><span class="co">    Fetch content from GitHub repositories.</span></span>
-<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a><span class="co">    Args:</span></span>
-<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a><span class="co">        url: GitHub raw URL (e.g., https://raw.githubusercontent.com/...)</span></span>
-<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a><span class="co">        mode: "public" for public repos, "private" for private repos requiring authentication</span></span>
-<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a><span class="co">        token_env_var: Name of environment variable containing GitHub token (default: GITHUB_TOKEN)</span></span>
-<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a><span class="co">    Returns:</span></span>
-<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a><span class="co">        requests.Response object</span></span>
-<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a><span class="co">    Raises:</span></span>
-<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a><span class="co">        ValueError: If token is missing for private mode or invalid mode</span></span>
-<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a><span class="co">        requests.HTTPError: If request fails</span></span>
-<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a><span class="co">    """</span></span>
-<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Validate mode</span></span>
-<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> mode <span class="kw">not</span> <span class="kw">in</span> [<span class="st">"public"</span>, <span class="st">"private"</span>]:</span>
-<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a>        <span class="cf">raise</span> <span class="pp">ValueError</span>(<span class="ss">f"mode must be 'public' or 'private', got '</span><span class="sc">{</span>mode<span class="sc">}</span><span class="ss">'"</span>)</span>
-<span id="cb6-27"><a href="#cb6-27" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-28"><a href="#cb6-28" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> mode <span class="op">==</span> <span class="st">"public"</span>:</span>
-<span id="cb6-29"><a href="#cb6-29" aria-hidden="true" tabindex="-1"></a>        response <span class="op">=</span> requests.get(url, timeout<span class="op">=</span><span class="dv">30</span>)</span>
-<span id="cb6-30"><a href="#cb6-30" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
-<span id="cb6-31"><a href="#cb6-31" aria-hidden="true" tabindex="-1"></a>        token <span class="op">=</span> os.getenv(token_env_var)</span>
-<span id="cb6-32"><a href="#cb6-32" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="kw">not</span> token:</span>
-<span id="cb6-33"><a href="#cb6-33" aria-hidden="true" tabindex="-1"></a>            <span class="cf">raise</span> <span class="pp">ValueError</span>(</span>
-<span id="cb6-34"><a href="#cb6-34" aria-hidden="true" tabindex="-1"></a>                <span class="ss">f"GitHub token not found in environment variable '</span><span class="sc">{</span>token_env_var<span class="sc">}</span><span class="ss">'. "</span></span>
-<span id="cb6-35"><a href="#cb6-35" aria-hidden="true" tabindex="-1"></a>                <span class="ss">f"Check your .env file has: </span><span class="sc">{</span>token_env_var<span class="sc">}</span><span class="ss">=your_token_here"</span></span>
-<span id="cb6-36"><a href="#cb6-36" aria-hidden="true" tabindex="-1"></a>            )</span>
-<span id="cb6-37"><a href="#cb6-37" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-38"><a href="#cb6-38" aria-hidden="true" tabindex="-1"></a>        headers <span class="op">=</span> {</span>
-<span id="cb6-39"><a href="#cb6-39" aria-hidden="true" tabindex="-1"></a>            <span class="st">'Authorization'</span>: <span class="ss">f'token </span><span class="sc">{</span>token<span class="sc">}</span><span class="ss">'</span>,</span>
-<span id="cb6-40"><a href="#cb6-40" aria-hidden="true" tabindex="-1"></a>            <span class="st">'Accept'</span>: <span class="st">'application/vnd.github.v3.raw'</span></span>
-<span id="cb6-41"><a href="#cb6-41" aria-hidden="true" tabindex="-1"></a>        }</span>
-<span id="cb6-42"><a href="#cb6-42" aria-hidden="true" tabindex="-1"></a>        response <span class="op">=</span> requests.get(url, headers<span class="op">=</span>headers, timeout<span class="op">=</span><span class="dv">30</span>)</span>
-<span id="cb6-43"><a href="#cb6-43" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-44"><a href="#cb6-44" aria-hidden="true" tabindex="-1"></a>    response.raise_for_status()</span>
-<span id="cb6-45"><a href="#cb6-45" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> response</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</details>
-</div>
-</section>
 </section>
 <section id="load-data" class="level1" data-number="2">
 <h1 data-number="2"><span class="header-section-number">2</span> Load Data</h1>
 <section id="uta-on-board-survey" class="level2" data-number="2.1">
 <h2 data-number="2.1" class="anchored" data-anchor-id="uta-on-board-survey"><span class="header-section-number">2.1</span> UTA On-Board Survey</h2>
-<div id="9b47cfa6" class="cell" data-execution_count="4">
+<div id="e4849e3a" class="cell" data-execution_count="5">
 <details class="code-fold">
 <summary>Show the code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>response <span class="op">=</span> fetch_github(</span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">"https://raw.githubusercontent.com/WFRCAnalytics/DATA-OBS-Prep-For-TDM/refs/heads/main/_output/UTA_OBS_2024_Processed.csv"</span></span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>df_obs_processed <span class="op">=</span> pd.read_csv(io.StringIO(response.text))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Read Processed UTA On-Board Survey Data directly from GitHub repo</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>response <span class="op">=</span> fetch_github(</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">"https://raw.githubusercontent.com/WFRCAnalytics/DATA-OBS-Prep-For-TDM/refs/heads/main/_output/UTA_OBS_2024_Processed.csv"</span>,</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    mode <span class="op">=</span> <span class="st">"private"</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>df_obs_processed <span class="op">=</span> pd.read_csv(io.StringIO(response.text))</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>df_obs_processed</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output cell-output-stderr">
-<pre><code>C:\Users\Pukar.Bhandari\AppData\Local\Temp\ipykernel_33112\566214103.py:4: DtypeWarning: Columns (8,24,32,37,54,132,137,174) have mixed types. Specify dtype option on import or set low_memory=False.
+<pre><code>C:\Users\Pukar.Bhandari\AppData\Local\Temp\ipykernel_24696\2568946126.py:7: DtypeWarning: Columns (8,24,32,37,54,132,137,174) have mixed types. Specify dtype option on import or set low_memory=False.
   df_obs_processed = pd.read_csv(io.StringIO(response.text))</code></pre>
+</div>
+<div class="cell-output cell-output-display" data-execution_count="14">
+<div>
+
+
+<table class="dataframe caption-top table table-sm table-striped small" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">ID</th>
+<th data-quarto-table-cell-role="th">DATE_COMPLETED</th>
+<th data-quarto-table-cell-role="th">DATE_TYPE</th>
+<th data-quarto-table-cell-role="th">ROUTE_DIRECTION_Code</th>
+<th data-quarto-table-cell-role="th">ROUTE_DIRECTION</th>
+<th data-quarto-table-cell-role="th">ROUTE_DIRECTION_Other</th>
+<th data-quarto-table-cell-role="th">HOME_ADDRESS_CITY</th>
+<th data-quarto-table-cell-role="th">HOME_ADDRESS_STATE</th>
+<th data-quarto-table-cell-role="th">HOME_ADDRESS_ZIP</th>
+<th data-quarto-table-cell-role="th">HOME_ADDRESS_LAT</th>
+<th data-quarto-table-cell-role="th">...</th>
+<th data-quarto-table-cell-role="th">a_lat</th>
+<th data-quarto-table-cell-role="th">a_lon</th>
+<th data-quarto-table-cell-role="th">FirstOn_lat</th>
+<th data-quarto-table-cell-role="th">FirstOn_lon</th>
+<th data-quarto-table-cell-role="th">LastOff_lat</th>
+<th data-quarto-table-cell-role="th">LastOff_lon</th>
+<th data-quarto-table-cell-role="th">p_Stop_lat</th>
+<th data-quarto-table-cell-role="th">p_Stop_lon</th>
+<th data-quarto-table-cell-role="th">a_Stop_lat</th>
+<th data-quarto-table-cell-role="th">a_Stop_lon</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">0</th>
+<td>5948</td>
+<td>2/27/2024</td>
+<td>Weekday</td>
+<td>UTA_1_2_00</td>
+<td>2 200 SOUTH - TO U HOSPITAL</td>
+<td>NaN</td>
+<td>Clearfield</td>
+<td>UT</td>
+<td>84015</td>
+<td>41.119565</td>
+<td>...</td>
+<td>40.759057</td>
+<td>-111.897381</td>
+<td>40.769221</td>
+<td>-111.898663</td>
+<td>41.118979</td>
+<td>-112.025922</td>
+<td>41.118979</td>
+<td>-112.025922</td>
+<td>40.769221</td>
+<td>-111.898663</td>
+</tr>
+<tr class="even">
+<th data-quarto-table-cell-role="th">1</th>
+<td>6067</td>
+<td>2/27/2024</td>
+<td>Weekday</td>
+<td>UTA_1_47_00</td>
+<td>47 4700 SOUTH - TO W VALLEY CTL</td>
+<td>NaN</td>
+<td>West Valley City</td>
+<td>UT</td>
+<td>84119</td>
+<td>40.689590</td>
+<td>...</td>
+<td>40.661882</td>
+<td>-111.899062</td>
+<td>40.660941</td>
+<td>-111.899443</td>
+<td>40.689384</td>
+<td>-111.967476</td>
+<td>40.689384</td>
+<td>-111.967476</td>
+<td>40.660941</td>
+<td>-111.899443</td>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">2</th>
+<td>6069</td>
+<td>3/16/2024</td>
+<td>Saturday</td>
+<td>UTA_1_750_01</td>
+<td>FRONTRUNNER 750 - SOUTHBOUND</td>
+<td>NaN</td>
+<td>Ogden</td>
+<td>UT</td>
+<td>84401</td>
+<td>41.186697</td>
+<td>...</td>
+<td>40.787558</td>
+<td>-111.985402</td>
+<td>41.188757</td>
+<td>-112.039378</td>
+<td>40.784356</td>
+<td>-111.982117</td>
+<td>41.188757</td>
+<td>-112.039378</td>
+<td>40.784356</td>
+<td>-111.982117</td>
+</tr>
+<tr class="even">
+<th data-quarto-table-cell-role="th">3</th>
+<td>6073</td>
+<td>2/28/2024</td>
+<td>Weekday</td>
+<td>UTA_1_750_01</td>
+<td>FRONTRUNNER 750 - SOUTHBOUND</td>
+<td>NaN</td>
+<td>Ogden</td>
+<td>UT</td>
+<td>84401</td>
+<td>41.236749</td>
+<td>...</td>
+<td>40.653134</td>
+<td>-111.910301</td>
+<td>41.188757</td>
+<td>-112.039378</td>
+<td>40.659758</td>
+<td>-111.896432</td>
+<td>41.188757</td>
+<td>-112.039378</td>
+<td>40.659758</td>
+<td>-111.896432</td>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">4</th>
+<td>6077</td>
+<td>2/28/2024</td>
+<td>Weekday</td>
+<td>UTA_1_47_00</td>
+<td>47 4700 SOUTH - TO W VALLEY CTL</td>
+<td>NaN</td>
+<td>West Valley City</td>
+<td>UT</td>
+<td>84119</td>
+<td>40.669687</td>
+<td>...</td>
+<td>40.684057</td>
+<td>-112.025854</td>
+<td>40.667711</td>
+<td>-111.961123</td>
+<td>40.681907</td>
+<td>-112.024041</td>
+<td>40.667711</td>
+<td>-111.961123</td>
+<td>40.681907</td>
+<td>-112.024041</td>
+</tr>
+<tr class="even">
+<th data-quarto-table-cell-role="th">...</th>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">13790</th>
+<td>30339</td>
+<td>4/26/2024</td>
+<td>Weekday</td>
+<td>UTA_1_704_01</td>
+<td>TRAX GREEN LINE 704 - TO AIRPORT</td>
+<td>NaN</td>
+<td>Salt Lake City</td>
+<td>UT</td>
+<td>84116</td>
+<td>40.772420</td>
+<td>...</td>
+<td>40.772426</td>
+<td>-111.915348</td>
+<td>40.771502</td>
+<td>-111.914486</td>
+<td>40.771536</td>
+<td>-111.945736</td>
+<td>40.771536</td>
+<td>-111.945736</td>
+<td>40.771502</td>
+<td>-111.914486</td>
+</tr>
+<tr class="even">
+<th data-quarto-table-cell-role="th">13791</th>
+<td>30340</td>
+<td>4/26/2024</td>
+<td>Weekday</td>
+<td>UTA_1_704_00</td>
+<td>TRAX GREEN LINE 704 - TO WEST VALLEY</td>
+<td>NaN</td>
+<td>Salt Lake City</td>
+<td>UT</td>
+<td>84116</td>
+<td>40.771361</td>
+<td>...</td>
+<td>40.745704</td>
+<td>-111.873920</td>
+<td>40.771505</td>
+<td>-111.915361</td>
+<td>40.750058</td>
+<td>-111.896818</td>
+<td>40.771505</td>
+<td>-111.915361</td>
+<td>40.750058</td>
+<td>-111.896818</td>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">13792</th>
+<td>30341</td>
+<td>4/26/2024</td>
+<td>Weekday</td>
+<td>UTA_1_704_00</td>
+<td>TRAX GREEN LINE 704 - TO WEST VALLEY</td>
+<td>NaN</td>
+<td>Salt Lake City</td>
+<td>UT</td>
+<td>84116</td>
+<td>40.773232</td>
+<td>...</td>
+<td>40.733521</td>
+<td>-111.879646</td>
+<td>40.771505</td>
+<td>-111.915361</td>
+<td>40.725345</td>
+<td>-111.877499</td>
+<td>40.771505</td>
+<td>-111.915361</td>
+<td>40.725345</td>
+<td>-111.877499</td>
+</tr>
+<tr class="even">
+<th data-quarto-table-cell-role="th">13793</th>
+<td>1000002</td>
+<td>2/29/2024</td>
+<td>Weekday</td>
+<td>UTA_1_701_00</td>
+<td>TRAX BLUE LINE 701 - TO DRAPER</td>
+<td>NaN</td>
+<td>Salt Lake City</td>
+<td>UT</td>
+<td>84111</td>
+<td>40.751607</td>
+<td>...</td>
+<td>40.672049</td>
+<td>-111.944605</td>
+<td>40.755113</td>
+<td>-111.891095</td>
+<td>40.674859</td>
+<td>-111.943134</td>
+<td>40.755113</td>
+<td>-111.891095</td>
+<td>40.674859</td>
+<td>-111.943134</td>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">13794</th>
+<td>1000004</td>
+<td>2/29/2024</td>
+<td>Weekday</td>
+<td>UTA_1_701_00</td>
+<td>TRAX BLUE LINE 701 - TO DRAPER</td>
+<td>NaN</td>
+<td>Salt Lake City</td>
+<td>UT</td>
+<td>84109</td>
+<td>40.722068</td>
+<td>...</td>
+<td>40.527251</td>
+<td>-111.857697</td>
+<td>40.725878</td>
+<td>-111.830935</td>
+<td>40.525496</td>
+<td>-111.858805</td>
+<td>40.725878</td>
+<td>-111.830935</td>
+<td>40.525496</td>
+<td>-111.858805</td>
+</tr>
+</tbody>
+</table>
+
+<p>13795 rows × 295 columns</p>
+</div>
 </div>
 </div>
 </section>
 <section id="household-travel-survey" class="level2" data-number="2.2">
 <h2 data-number="2.2" class="anchored" data-anchor-id="household-travel-survey"><span class="header-section-number">2.2</span> Household Travel Survey</h2>
-<div id="7ff20ee9" class="cell" data-execution_count="5">
+<div id="e53f93ae" class="cell" data-execution_count="6">
 <details class="code-fold">
 <summary>Show the code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>hts_hh_23 <span class="op">=</span> client.query(<span class="st">"SELECT * FROM "</span> <span class="op">+</span> <span class="st">'wfrc-modeling-data.prd_tdm_hts_2023.hh'</span>).to_dataframe()</span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>hts_hh_23</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Load Household-level data from 2023 Household Travel Survey</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>df_hts_hh23 <span class="op">=</span> client.query(</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">"SELECT * FROM "</span> <span class="op">+</span> <span class="st">'wfrc-modeling-data.prd_tdm_hts_2023.hh'</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>).to_dataframe()</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>df_hts_hh23</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
-<div class="cell-output cell-output-display" data-execution_count="5">
+<div class="cell-output cell-output-display" data-execution_count="15">
 <div>
 
 
@@ -821,14 +1151,17 @@ C:/Users/Pukar.Bhandari/.private/confidential-2023-utah-hts-5fd7ddd219a7.json</c
 </div>
 </div>
 </div>
-<div id="ad9fe71d" class="cell" data-execution_count="6">
+<div id="b483f071" class="cell" data-execution_count="7">
 <details class="code-fold">
 <summary>Show the code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>hts_person_23 <span class="op">=</span> client.query(<span class="st">"SELECT * FROM "</span> <span class="op">+</span> <span class="st">'wfrc-modeling-data.prd_tdm_hts_2023.person'</span>).to_dataframe()</span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>hts_person_23</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Load Person-level data from 2023 Household Travel Survey</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>df_hts_person23 <span class="op">=</span> client.query(</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">"SELECT * FROM "</span> <span class="op">+</span> <span class="st">'wfrc-modeling-data.prd_tdm_hts_2023.person'</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>).to_dataframe()</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>df_hts_person23</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
-<div class="cell-output cell-output-display" data-execution_count="6">
+<div class="cell-output cell-output-display" data-execution_count="16">
 <div>
 
 
@@ -1131,10 +1464,176 @@ C:/Users/Pukar.Bhandari/.private/confidential-2023-utah-hts-5fd7ddd219a7.json</c
 </div>
 </div>
 </div>
+</section>
+</section>
+<section id="understanding-mode-hierarchy" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> Understanding Mode Hierarchy</h1>
+<div class="cell" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class="figure"><p></p>
+<div>
+<pre class="mermaid mermaid-js">flowchart LR
+  T["🚦 Total Trips"]
+
+  %% Top-level split
+  T --&gt; M["Motorized"]
+  T --&gt; NM["Non-motorized"]
+
+  %% Motorized branch
+  subgraph S1["🚗 Motorized Transportation"]
+    direction TB
+    M --&gt; A["Auto"]
+    M --&gt; TR["Transit"]
+
+    %% Auto
+    A --&gt; DA["Drive alone"]
+    A --&gt; SR["Shared ride"]
+    SR --&gt; SR2["SR2&lt;br/&gt;&lt;i&gt;2 people&lt;/i&gt;"]
+    SR --&gt; SR3["SR3&lt;br/&gt;&lt;i&gt;3+ people&lt;/i&gt;"]
+
+    %% Transit (two complementary views)
+    subgraph S1a["🚌 Transit – By Service Type"]
+      direction TB
+      TR --&gt; TM["By modes"]
+      TM --&gt; LB["Local bus"]
+      TM --&gt; CB["Core bus"]
+      TM --&gt; EB["Express bus"]
+      TM --&gt; LRT["LRT&lt;br/&gt;&lt;i&gt;light rail&lt;/i&gt;"]
+      TM --&gt; CRT["CRT&lt;br/&gt;&lt;i&gt;commuter rail&lt;/i&gt;"]
+      TM --&gt; BRT["BRT&lt;br/&gt;&lt;i&gt;bus rapid&lt;/i&gt;"]
+    end
+
+    subgraph S1b["🚶🚗 Transit – By Access Type"]
+      direction TB
+      TR --&gt; TA["By access type"]
+
+      %% Walk-to-transit
+      TA --&gt; WTT["🚶 Walk-to-transit"]
+      WTT --&gt; WLB["Walk → Local bus"]
+      WTT --&gt; WCB["Walk → Core bus"]
+      WTT --&gt; WEB["Walk → Express bus"]
+      WTT --&gt; WLRT["Walk → LRT"]
+      WTT --&gt; WCRT["Walk → CRT"]
+      WTT --&gt; WBRT["Walk → BRT"]
+
+      %% Drive-to-transit
+      TA --&gt; DTT["🚗 Drive-to-transit"]
+      DTT --&gt; DLB["Drive → Local bus"]
+      DTT --&gt; DCB["Drive → Core bus"]
+      DTT --&gt; DEB["Drive → Express bus"]
+      DTT --&gt; DLRT["Drive → LRT"]
+      DTT --&gt; DCRT["Drive → CRT"]
+      DTT --&gt; DBRT["Drive → BRT"]
+    end
+  end
+
+  %% Non-motorized branch
+  subgraph S2["🚶 Non-motorized Transportation"]
+    direction TB
+    NM --&gt; WALK["Walk"]
+    NM --&gt; BIKE["Bike"]
+  end
+
+  %% Styling
+  classDef rootNode fill:#2c3e50,stroke:#34495e,stroke-width:3px,color:#fff,font-weight:bold,font-size:16px
+  classDef motorizedNode fill:#3498db,stroke:#2980b9,stroke-width:2px,color:#fff,font-weight:bold
+  classDef nonMotorizedNode fill:#27ae60,stroke:#229954,stroke-width:2px,color:#fff,font-weight:bold
+  classDef autoNode fill:#e67e22,stroke:#d35400,stroke-width:2px,color:#fff
+  classDef transitNode fill:#9b59b6,stroke:#8e44ad,stroke-width:2px,color:#fff
+  classDef walkTransitNode fill:#1abc9c,stroke:#16a085,stroke-width:2px,color:#fff
+  classDef driveTransitNode fill:#e74c3c,stroke:#c0392b,stroke-width:2px,color:#fff
+  classDef leafNode fill:#ecf0f1,stroke:#95a5a6,stroke-width:1px,color:#2c3e50
+  classDef subgraphStyle fill:#f8f9fa,stroke:#dee2e6,stroke-width:2px
+
+  class T rootNode
+  class M motorizedNode
+  class NM nonMotorizedNode
+  class A,DA,SR,SR2,SR3 autoNode
+  class TR,TM,TA transitNode
+  class WTT,WLB,WCB,WEB,WLRT,WCRT,WBRT walkTransitNode
+  class DTT,DLB,DCB,DEB,DLRT,DCRT,DBRT driveTransitNode
+  class LB,CB,EB,LRT,CRT,BRT,WALK,BIKE leafNode
+</pre>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
+</section>
+<section id="identify-variable-of-interest" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> Identify Variable of Interest</h1>
+<section id="on-board-survey" class="level2" data-number="4.1">
+<h2 data-number="4.1" class="anchored" data-anchor-id="on-board-survey"><span class="header-section-number">4.1</span> On-Board Survey</h2>
+<section id="trip-purposes" class="level3">
+<h3 class="anchored" data-anchor-id="trip-purposes">Trip Purposes</h3>
+<div id="cf6cb14e" class="cell" data-execution_count="8">
+<details class="code-fold">
+<summary>Show the code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>df_obs_processed[<span class="st">"Purp5_text"</span>].value_counts() <span class="co"># Trip Purpose: HBW, HBO, HBC, NHB, HBSch</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-display" data-execution_count="17">
+<pre><code>Purp5_text
+HBW      5221
+HBO      4779
+HBC      2358
+NHB      1113
+HBSch     324
+Name: count, dtype: int64</code></pre>
+</div>
+</div>
+</section>
+<section id="peak-vs-off-peak" class="level3">
+<h3 class="anchored" data-anchor-id="peak-vs-off-peak">Peak vs Off-Peak</h3>
+<div id="66a4fce9" class="cell" data-execution_count="9">
+<details class="code-fold">
+<summary>Show the code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>df_obs_processed[<span class="st">"PK_OK"</span>].value_counts() <span class="co"># Peak vs Off-Peak</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-display" data-execution_count="18">
+<pre><code>PK_OK
+OK    7656
+PK    6139
+Name: count, dtype: int64</code></pre>
+</div>
+</div>
+</section>
+<section id="motorized-vs-non-motorized" class="level3">
+<h3 class="anchored" data-anchor-id="motorized-vs-non-motorized">Motorized vs Non-motorized</h3>
+<div id="96937239" class="cell" data-execution_count="10">
+<details class="code-fold">
+<summary>Show the code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>df_obs_processed[<span class="st">"Ac_Mode_Model"</span>].value_counts() <span class="co"># Motorized (Drive) vs Non-motorized (Walk)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-display" data-execution_count="19">
+<pre><code>Ac_Mode_Model
+Walk     11016
+Drive     2779
+Name: count, dtype: int64</code></pre>
+</div>
+</div>
+</section>
+<section id="vehicle-ownership" class="level3">
+<h3 class="anchored" data-anchor-id="vehicle-ownership">Vehicle Ownership</h3>
+<div id="c5de6624" class="cell" data-execution_count="11">
+<details class="code-fold">
+<summary>Show the code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>df_obs_processed[<span class="st">"Veh_Cat3p"</span>].value_counts() <span class="co"># Vehile Ownership Category: 0, 1, 2, 3+</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-display" data-execution_count="20">
+<pre><code>Veh_Cat3p
+0    4251
+1    3877
+2    3358
+3    2309
+Name: count, dtype: int64</code></pre>
+</div>
+</div>
 
 
 <!-- -->
 
+</section>
 </section>
 </section>
 
@@ -1603,135 +2102,279 @@ C:/Users/Pukar.Bhandari/.private/confidential-2023-utah-hts-5fd7ddd219a7.json</c
     }
   });
   </script><div class="modal fade" id="quarto-embedded-source-code-modal" tabindex="-1" aria-labelledby="quarto-embedded-source-code-modal-label" aria-hidden="true"><div class="modal-dialog modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="quarto-embedded-source-code-modal-label">Source Code</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="">
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb11" data-shortcodes="false"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="an">title:</span><span class="co"> Calculating the Mode Choice Calibration Parameters</span></span>
-<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="an">subtitle:</span><span class="co"> Using Household Travel Survey and UTA On-Board Survey Data</span></span>
-<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="an">description:</span><span class="co"> Lorem Ipsum</span></span>
-<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a><span class="an">author:</span></span>
-<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a><span class="co"> - name: Pukar Bhandari</span></span>
-<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a><span class="co">   email: pukar.bhandari@wfrc.utah.gov</span></span>
-<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a><span class="co">   affiliation:</span></span>
-<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a><span class="co">     - name: Wasatch Front Regional Council</span></span>
-<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a><span class="co">       url: "https://wfrc.utah.gov/"</span></span>
-<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a><span class="an">date:</span><span class="co"> "2025-11-03"</span></span>
-<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
-<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a><span class="fu"># Setup Environment</span></span>
-<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a>This section prepares the Python environment with all necessary libraries and configurations. We'll import data manipulation libraries (pandas, numpy), and visualization tools (matplotlib, seaborn).</span>
-<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a><span class="fu">## Install Libraries</span></span>
-<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a><span class="in">```python</span></span>
-<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a><span class="op">!</span>conda install <span class="op">-</span>c conda<span class="op">-</span>forge numpy pandas matplotlib seaborn requests pathlib BigQuery</span>
-<span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb11-23"><a href="#cb11-23" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-24"><a href="#cb11-24" aria-hidden="true" tabindex="-1"></a><span class="fu">## Import Libraries</span></span>
-<span id="cb11-25"><a href="#cb11-25" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-28"><a href="#cb11-28" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
-<span id="cb11-29"><a href="#cb11-29" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
-<span id="cb11-30"><a href="#cb11-30" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
-<span id="cb11-31"><a href="#cb11-31" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
-<span id="cb11-32"><a href="#cb11-32" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> seaborn <span class="im">as</span> sns</span>
-<span id="cb11-33"><a href="#cb11-33" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pathlib <span class="im">import</span> Path</span>
-<span id="cb11-34"><a href="#cb11-34" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-35"><a href="#cb11-35" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb11-36"><a href="#cb11-36" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> requests</span>
-<span id="cb11-37"><a href="#cb11-37" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> io</span>
-<span id="cb11-38"><a href="#cb11-38" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> dotenv <span class="im">import</span> load_dotenv</span>
-<span id="cb11-39"><a href="#cb11-39" aria-hidden="true" tabindex="-1"></a>load_dotenv()</span>
-<span id="cb11-40"><a href="#cb11-40" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb11-41"><a href="#cb11-41" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-42"><a href="#cb11-42" aria-hidden="true" tabindex="-1"></a><span class="fu">## Setup BigQuery</span></span>
-<span id="cb11-43"><a href="#cb11-43" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-46"><a href="#cb11-46" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
-<span id="cb11-47"><a href="#cb11-47" aria-hidden="true" tabindex="-1"></a><span class="co"># import global TDM functions</span></span>
-<span id="cb11-48"><a href="#cb11-48" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> sys</span>
-<span id="cb11-49"><a href="#cb11-49" aria-hidden="true" tabindex="-1"></a>sys.path.insert(<span class="dv">0</span>, <span class="st">'../Resources/2-Python/global-functions'</span>)</span>
-<span id="cb11-50"><a href="#cb11-50" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> BigQuery</span>
-<span id="cb11-51"><a href="#cb11-51" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-52"><a href="#cb11-52" aria-hidden="true" tabindex="-1"></a>client <span class="op">=</span> BigQuery.getBigQueryClient_Confidential2023UtahHTS()</span>
-<span id="cb11-53"><a href="#cb11-53" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb11-54"><a href="#cb11-54" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-55"><a href="#cb11-55" aria-hidden="true" tabindex="-1"></a><span class="fu">## Environment Variables</span></span>
-<span id="cb11-56"><a href="#cb11-56" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-57"><a href="#cb11-57" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-58"><a href="#cb11-58" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-59"><a href="#cb11-59" aria-hidden="true" tabindex="-1"></a><span class="fu">## Helper Functions</span></span>
-<span id="cb11-60"><a href="#cb11-60" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-63"><a href="#cb11-63" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
-<span id="cb11-64"><a href="#cb11-64" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
-<span id="cb11-65"><a href="#cb11-65" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> requests</span>
-<span id="cb11-66"><a href="#cb11-66" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-67"><a href="#cb11-67" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> fetch_github(</span>
-<span id="cb11-68"><a href="#cb11-68" aria-hidden="true" tabindex="-1"></a>    url: <span class="bu">str</span>,</span>
-<span id="cb11-69"><a href="#cb11-69" aria-hidden="true" tabindex="-1"></a>    mode: <span class="bu">str</span> <span class="op">=</span> <span class="st">"private"</span>,</span>
-<span id="cb11-70"><a href="#cb11-70" aria-hidden="true" tabindex="-1"></a>    token_env_var: <span class="bu">str</span> <span class="op">=</span> <span class="st">"GITHUB_TOKEN"</span></span>
-<span id="cb11-71"><a href="#cb11-71" aria-hidden="true" tabindex="-1"></a>) <span class="op">-&gt;</span> requests.Response:</span>
-<span id="cb11-72"><a href="#cb11-72" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""</span></span>
-<span id="cb11-73"><a href="#cb11-73" aria-hidden="true" tabindex="-1"></a><span class="co">    Fetch content from GitHub repositories.</span></span>
-<span id="cb11-74"><a href="#cb11-74" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-75"><a href="#cb11-75" aria-hidden="true" tabindex="-1"></a><span class="co">    Args:</span></span>
-<span id="cb11-76"><a href="#cb11-76" aria-hidden="true" tabindex="-1"></a><span class="co">        url: GitHub raw URL (e.g., https://raw.githubusercontent.com/...)</span></span>
-<span id="cb11-77"><a href="#cb11-77" aria-hidden="true" tabindex="-1"></a><span class="co">        mode: "public" for public repos, "private" for private repos requiring authentication</span></span>
-<span id="cb11-78"><a href="#cb11-78" aria-hidden="true" tabindex="-1"></a><span class="co">        token_env_var: Name of environment variable containing GitHub token (default: GITHUB_TOKEN)</span></span>
-<span id="cb11-79"><a href="#cb11-79" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-80"><a href="#cb11-80" aria-hidden="true" tabindex="-1"></a><span class="co">    Returns:</span></span>
-<span id="cb11-81"><a href="#cb11-81" aria-hidden="true" tabindex="-1"></a><span class="co">        requests.Response object</span></span>
-<span id="cb11-82"><a href="#cb11-82" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-83"><a href="#cb11-83" aria-hidden="true" tabindex="-1"></a><span class="co">    Raises:</span></span>
-<span id="cb11-84"><a href="#cb11-84" aria-hidden="true" tabindex="-1"></a><span class="co">        ValueError: If token is missing for private mode or invalid mode</span></span>
-<span id="cb11-85"><a href="#cb11-85" aria-hidden="true" tabindex="-1"></a><span class="co">        requests.HTTPError: If request fails</span></span>
-<span id="cb11-86"><a href="#cb11-86" aria-hidden="true" tabindex="-1"></a><span class="co">    """</span></span>
-<span id="cb11-87"><a href="#cb11-87" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Validate mode</span></span>
-<span id="cb11-88"><a href="#cb11-88" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> mode <span class="kw">not</span> <span class="kw">in</span> [<span class="st">"public"</span>, <span class="st">"private"</span>]:</span>
-<span id="cb11-89"><a href="#cb11-89" aria-hidden="true" tabindex="-1"></a>        <span class="cf">raise</span> <span class="pp">ValueError</span>(<span class="ss">f"mode must be 'public' or 'private', got '</span><span class="sc">{</span>mode<span class="sc">}</span><span class="ss">'"</span>)</span>
-<span id="cb11-90"><a href="#cb11-90" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-91"><a href="#cb11-91" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> mode <span class="op">==</span> <span class="st">"public"</span>:</span>
-<span id="cb11-92"><a href="#cb11-92" aria-hidden="true" tabindex="-1"></a>        response <span class="op">=</span> requests.get(url, timeout<span class="op">=</span><span class="dv">30</span>)</span>
-<span id="cb11-93"><a href="#cb11-93" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
-<span id="cb11-94"><a href="#cb11-94" aria-hidden="true" tabindex="-1"></a>        token <span class="op">=</span> os.getenv(token_env_var)</span>
-<span id="cb11-95"><a href="#cb11-95" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="kw">not</span> token:</span>
-<span id="cb11-96"><a href="#cb11-96" aria-hidden="true" tabindex="-1"></a>            <span class="cf">raise</span> <span class="pp">ValueError</span>(</span>
-<span id="cb11-97"><a href="#cb11-97" aria-hidden="true" tabindex="-1"></a>                <span class="ss">f"GitHub token not found in environment variable '</span><span class="sc">{</span>token_env_var<span class="sc">}</span><span class="ss">'. "</span></span>
-<span id="cb11-98"><a href="#cb11-98" aria-hidden="true" tabindex="-1"></a>                <span class="ss">f"Check your .env file has: </span><span class="sc">{</span>token_env_var<span class="sc">}</span><span class="ss">=your_token_here"</span></span>
-<span id="cb11-99"><a href="#cb11-99" aria-hidden="true" tabindex="-1"></a>            )</span>
-<span id="cb11-100"><a href="#cb11-100" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-101"><a href="#cb11-101" aria-hidden="true" tabindex="-1"></a>        headers <span class="op">=</span> {</span>
-<span id="cb11-102"><a href="#cb11-102" aria-hidden="true" tabindex="-1"></a>            <span class="st">'Authorization'</span>: <span class="ss">f'token </span><span class="sc">{</span>token<span class="sc">}</span><span class="ss">'</span>,</span>
-<span id="cb11-103"><a href="#cb11-103" aria-hidden="true" tabindex="-1"></a>            <span class="st">'Accept'</span>: <span class="st">'application/vnd.github.v3.raw'</span></span>
-<span id="cb11-104"><a href="#cb11-104" aria-hidden="true" tabindex="-1"></a>        }</span>
-<span id="cb11-105"><a href="#cb11-105" aria-hidden="true" tabindex="-1"></a>        response <span class="op">=</span> requests.get(url, headers<span class="op">=</span>headers, timeout<span class="op">=</span><span class="dv">30</span>)</span>
-<span id="cb11-106"><a href="#cb11-106" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-107"><a href="#cb11-107" aria-hidden="true" tabindex="-1"></a>    response.raise_for_status()</span>
-<span id="cb11-108"><a href="#cb11-108" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> response</span>
-<span id="cb11-109"><a href="#cb11-109" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb11-110"><a href="#cb11-110" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-111"><a href="#cb11-111" aria-hidden="true" tabindex="-1"></a><span class="fu"># Load Data</span></span>
-<span id="cb11-112"><a href="#cb11-112" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-113"><a href="#cb11-113" aria-hidden="true" tabindex="-1"></a><span class="fu">## UTA On-Board Survey</span></span>
-<span id="cb11-114"><a href="#cb11-114" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-117"><a href="#cb11-117" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
-<span id="cb11-118"><a href="#cb11-118" aria-hidden="true" tabindex="-1"></a>response <span class="op">=</span> fetch_github(</span>
-<span id="cb11-119"><a href="#cb11-119" aria-hidden="true" tabindex="-1"></a>    <span class="st">"https://raw.githubusercontent.com/WFRCAnalytics/DATA-OBS-Prep-For-TDM/refs/heads/main/_output/UTA_OBS_2024_Processed.csv"</span></span>
-<span id="cb11-120"><a href="#cb11-120" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb11-121"><a href="#cb11-121" aria-hidden="true" tabindex="-1"></a>df_obs_processed <span class="op">=</span> pd.read_csv(io.StringIO(response.text))</span>
-<span id="cb11-122"><a href="#cb11-122" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb11-123"><a href="#cb11-123" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-124"><a href="#cb11-124" aria-hidden="true" tabindex="-1"></a><span class="fu">## Household Travel Survey</span></span>
-<span id="cb11-125"><a href="#cb11-125" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-128"><a href="#cb11-128" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
-<span id="cb11-129"><a href="#cb11-129" aria-hidden="true" tabindex="-1"></a>hts_hh_23 <span class="op">=</span> client.query(<span class="st">"SELECT * FROM "</span> <span class="op">+</span> <span class="st">'wfrc-modeling-data.prd_tdm_hts_2023.hh'</span>).to_dataframe()</span>
-<span id="cb11-130"><a href="#cb11-130" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-131"><a href="#cb11-131" aria-hidden="true" tabindex="-1"></a>hts_hh_23</span>
-<span id="cb11-132"><a href="#cb11-132" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb11-133"><a href="#cb11-133" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-134"><a href="#cb11-134" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-137"><a href="#cb11-137" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
-<span id="cb11-138"><a href="#cb11-138" aria-hidden="true" tabindex="-1"></a>hts_person_23 <span class="op">=</span> client.query(<span class="st">"SELECT * FROM "</span> <span class="op">+</span> <span class="st">'wfrc-modeling-data.prd_tdm_hts_2023.person'</span>).to_dataframe()</span>
-<span id="cb11-139"><a href="#cb11-139" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-140"><a href="#cb11-140" aria-hidden="true" tabindex="-1"></a>hts_person_23</span>
-<span id="cb11-141"><a href="#cb11-141" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb19" data-shortcodes="false"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a><span class="an">title:</span><span class="co"> Calculating the Mode Choice Calibration Parameters</span></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a><span class="an">subtitle:</span><span class="co"> Using Household Travel Survey and UTA On-Board Survey Data</span></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a><span class="an">description:</span><span class="co"> Lorem Ipsum</span></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a><span class="an">author:</span></span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a><span class="co"> - name: Pukar Bhandari</span></span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a><span class="co">   email: pukar.bhandari@wfrc.utah.gov</span></span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a><span class="co">   affiliation:</span></span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a><span class="co">     - name: Wasatch Front Regional Council</span></span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a><span class="co">       url: "https://wfrc.utah.gov/"</span></span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a><span class="an">date:</span><span class="co"> "2025-11-03"</span></span>
+<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-14"><a href="#cb19-14" aria-hidden="true" tabindex="-1"></a><span class="fu"># Setup Environment</span></span>
+<span id="cb19-15"><a href="#cb19-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-16"><a href="#cb19-16" aria-hidden="true" tabindex="-1"></a>This section prepares the Python environment with all necessary libraries and configurations. We'll import data manipulation libraries (pandas, numpy), and visualization tools (matplotlib, seaborn).</span>
+<span id="cb19-17"><a href="#cb19-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-18"><a href="#cb19-18" aria-hidden="true" tabindex="-1"></a><span class="fu">## Install Libraries</span></span>
+<span id="cb19-19"><a href="#cb19-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-20"><a href="#cb19-20" aria-hidden="true" tabindex="-1"></a><span class="in">```python</span></span>
+<span id="cb19-21"><a href="#cb19-21" aria-hidden="true" tabindex="-1"></a><span class="op">!</span>conda install <span class="op">-</span>c conda<span class="op">-</span>forge numpy pandas matplotlib seaborn requests pathlib BigQuery</span>
+<span id="cb19-22"><a href="#cb19-22" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb19-23"><a href="#cb19-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-24"><a href="#cb19-24" aria-hidden="true" tabindex="-1"></a><span class="fu">## Import Libraries</span></span>
+<span id="cb19-25"><a href="#cb19-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-28"><a href="#cb19-28" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
+<span id="cb19-29"><a href="#cb19-29" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb19-30"><a href="#cb19-30" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb19-31"><a href="#cb19-31" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb19-32"><a href="#cb19-32" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> seaborn <span class="im">as</span> sns</span>
+<span id="cb19-33"><a href="#cb19-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-34"><a href="#cb19-34" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> importlib.util</span>
+<span id="cb19-35"><a href="#cb19-35" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pathlib <span class="im">import</span> Path</span>
+<span id="cb19-36"><a href="#cb19-36" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> sys</span>
+<span id="cb19-37"><a href="#cb19-37" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb19-38"><a href="#cb19-38" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> requests</span>
+<span id="cb19-39"><a href="#cb19-39" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> io</span>
+<span id="cb19-40"><a href="#cb19-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-41"><a href="#cb19-41" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> dotenv <span class="im">import</span> load_dotenv</span>
+<span id="cb19-42"><a href="#cb19-42" aria-hidden="true" tabindex="-1"></a>load_dotenv()</span>
+<span id="cb19-43"><a href="#cb19-43" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb19-44"><a href="#cb19-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-45"><a href="#cb19-45" aria-hidden="true" tabindex="-1"></a><span class="fu">## Environment Variables</span></span>
+<span id="cb19-46"><a href="#cb19-46" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-47"><a href="#cb19-47" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-48"><a href="#cb19-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-49"><a href="#cb19-49" aria-hidden="true" tabindex="-1"></a><span class="fu">## Helper Functions</span></span>
+<span id="cb19-50"><a href="#cb19-50" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-53"><a href="#cb19-53" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
+<span id="cb19-54"><a href="#cb19-54" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> fetch_github(</span>
+<span id="cb19-55"><a href="#cb19-55" aria-hidden="true" tabindex="-1"></a>    url: <span class="bu">str</span>,</span>
+<span id="cb19-56"><a href="#cb19-56" aria-hidden="true" tabindex="-1"></a>    mode: <span class="bu">str</span> <span class="op">=</span> <span class="st">"private"</span>,</span>
+<span id="cb19-57"><a href="#cb19-57" aria-hidden="true" tabindex="-1"></a>    token_env_var: <span class="bu">str</span> <span class="op">=</span> <span class="st">"GITHUB_TOKEN"</span></span>
+<span id="cb19-58"><a href="#cb19-58" aria-hidden="true" tabindex="-1"></a>) <span class="op">-&gt;</span> requests.Response:</span>
+<span id="cb19-59"><a href="#cb19-59" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""</span></span>
+<span id="cb19-60"><a href="#cb19-60" aria-hidden="true" tabindex="-1"></a><span class="co">    Fetch content from GitHub repositories.</span></span>
+<span id="cb19-61"><a href="#cb19-61" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-62"><a href="#cb19-62" aria-hidden="true" tabindex="-1"></a><span class="co">    Args:</span></span>
+<span id="cb19-63"><a href="#cb19-63" aria-hidden="true" tabindex="-1"></a><span class="co">        url: GitHub raw URL (e.g., https://raw.githubusercontent.com/...)</span></span>
+<span id="cb19-64"><a href="#cb19-64" aria-hidden="true" tabindex="-1"></a><span class="co">        mode: "public" for public repos, "private" for private repos requiring authentication</span></span>
+<span id="cb19-65"><a href="#cb19-65" aria-hidden="true" tabindex="-1"></a><span class="co">        token_env_var: Name of environment variable containing GitHub token (default: GITHUB_TOKEN)</span></span>
+<span id="cb19-66"><a href="#cb19-66" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-67"><a href="#cb19-67" aria-hidden="true" tabindex="-1"></a><span class="co">    Returns:</span></span>
+<span id="cb19-68"><a href="#cb19-68" aria-hidden="true" tabindex="-1"></a><span class="co">        requests.Response object</span></span>
+<span id="cb19-69"><a href="#cb19-69" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-70"><a href="#cb19-70" aria-hidden="true" tabindex="-1"></a><span class="co">    Raises:</span></span>
+<span id="cb19-71"><a href="#cb19-71" aria-hidden="true" tabindex="-1"></a><span class="co">        ValueError: If token is missing for private mode or invalid mode</span></span>
+<span id="cb19-72"><a href="#cb19-72" aria-hidden="true" tabindex="-1"></a><span class="co">        requests.HTTPError: If request fails</span></span>
+<span id="cb19-73"><a href="#cb19-73" aria-hidden="true" tabindex="-1"></a><span class="co">    """</span></span>
+<span id="cb19-74"><a href="#cb19-74" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Validate mode</span></span>
+<span id="cb19-75"><a href="#cb19-75" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> mode <span class="kw">not</span> <span class="kw">in</span> [<span class="st">"public"</span>, <span class="st">"private"</span>]:</span>
+<span id="cb19-76"><a href="#cb19-76" aria-hidden="true" tabindex="-1"></a>        <span class="cf">raise</span> <span class="pp">ValueError</span>(<span class="ss">f"mode must be 'public' or 'private', got '</span><span class="sc">{</span>mode<span class="sc">}</span><span class="ss">'"</span>)</span>
+<span id="cb19-77"><a href="#cb19-77" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-78"><a href="#cb19-78" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> mode <span class="op">==</span> <span class="st">"public"</span>:</span>
+<span id="cb19-79"><a href="#cb19-79" aria-hidden="true" tabindex="-1"></a>        response <span class="op">=</span> requests.get(url, timeout<span class="op">=</span><span class="dv">30</span>)</span>
+<span id="cb19-80"><a href="#cb19-80" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
+<span id="cb19-81"><a href="#cb19-81" aria-hidden="true" tabindex="-1"></a>        token <span class="op">=</span> os.getenv(token_env_var)</span>
+<span id="cb19-82"><a href="#cb19-82" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="kw">not</span> token:</span>
+<span id="cb19-83"><a href="#cb19-83" aria-hidden="true" tabindex="-1"></a>            <span class="cf">raise</span> <span class="pp">ValueError</span>(</span>
+<span id="cb19-84"><a href="#cb19-84" aria-hidden="true" tabindex="-1"></a>                <span class="ss">f"GitHub token not found in environment variable '</span><span class="sc">{</span>token_env_var<span class="sc">}</span><span class="ss">'. "</span></span>
+<span id="cb19-85"><a href="#cb19-85" aria-hidden="true" tabindex="-1"></a>                <span class="ss">f"Check your .env file has: </span><span class="sc">{</span>token_env_var<span class="sc">}</span><span class="ss">=your_token_here"</span></span>
+<span id="cb19-86"><a href="#cb19-86" aria-hidden="true" tabindex="-1"></a>            )</span>
+<span id="cb19-87"><a href="#cb19-87" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-88"><a href="#cb19-88" aria-hidden="true" tabindex="-1"></a>        headers <span class="op">=</span> {</span>
+<span id="cb19-89"><a href="#cb19-89" aria-hidden="true" tabindex="-1"></a>            <span class="st">'Authorization'</span>: <span class="ss">f'token </span><span class="sc">{</span>token<span class="sc">}</span><span class="ss">'</span>,</span>
+<span id="cb19-90"><a href="#cb19-90" aria-hidden="true" tabindex="-1"></a>            <span class="st">'Accept'</span>: <span class="st">'application/vnd.github.v3.raw'</span></span>
+<span id="cb19-91"><a href="#cb19-91" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb19-92"><a href="#cb19-92" aria-hidden="true" tabindex="-1"></a>        response <span class="op">=</span> requests.get(url, headers<span class="op">=</span>headers, timeout<span class="op">=</span><span class="dv">30</span>)</span>
+<span id="cb19-93"><a href="#cb19-93" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-94"><a href="#cb19-94" aria-hidden="true" tabindex="-1"></a>    response.raise_for_status()</span>
+<span id="cb19-95"><a href="#cb19-95" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> response</span>
+<span id="cb19-96"><a href="#cb19-96" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb19-97"><a href="#cb19-97" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-98"><a href="#cb19-98" aria-hidden="true" tabindex="-1"></a><span class="fu">## Setup BigQuery</span></span>
+<span id="cb19-99"><a href="#cb19-99" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-102"><a href="#cb19-102" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
+<span id="cb19-103"><a href="#cb19-103" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: false</span></span>
+<span id="cb19-104"><a href="#cb19-104" aria-hidden="true" tabindex="-1"></a><span class="co">#| echo: false</span></span>
+<span id="cb19-105"><a href="#cb19-105" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-106"><a href="#cb19-106" aria-hidden="true" tabindex="-1"></a><span class="co"># # Import global TDM functions from local 'Resource' clone</span></span>
+<span id="cb19-107"><a href="#cb19-107" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-108"><a href="#cb19-108" aria-hidden="true" tabindex="-1"></a><span class="co"># import sys</span></span>
+<span id="cb19-109"><a href="#cb19-109" aria-hidden="true" tabindex="-1"></a><span class="co"># sys.path.insert(0, '../Resources/2-Python/global-functions')</span></span>
+<span id="cb19-110"><a href="#cb19-110" aria-hidden="true" tabindex="-1"></a><span class="co"># import BigQuery</span></span>
+<span id="cb19-111"><a href="#cb19-111" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-112"><a href="#cb19-112" aria-hidden="true" tabindex="-1"></a><span class="co"># client = BigQuery.getBigQueryClient_Confidential2023UtahHTS()</span></span>
+<span id="cb19-113"><a href="#cb19-113" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb19-114"><a href="#cb19-114" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-117"><a href="#cb19-117" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
+<span id="cb19-118"><a href="#cb19-118" aria-hidden="true" tabindex="-1"></a><span class="co"># # Import global TDM functions from remote 'Resource' repo</span></span>
+<span id="cb19-119"><a href="#cb19-119" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-120"><a href="#cb19-120" aria-hidden="true" tabindex="-1"></a><span class="co"># Fetch and import BigQuery module</span></span>
+<span id="cb19-121"><a href="#cb19-121" aria-hidden="true" tabindex="-1"></a>response <span class="op">=</span> fetch_github(</span>
+<span id="cb19-122"><a href="#cb19-122" aria-hidden="true" tabindex="-1"></a>    <span class="st">'https://raw.githubusercontent.com/WFRCAnalytics/Resources/refs/heads/master/2-Python/global-functions/BigQuery.py'</span>,</span>
+<span id="cb19-123"><a href="#cb19-123" aria-hidden="true" tabindex="-1"></a>    mode<span class="op">=</span><span class="st">"public"</span></span>
+<span id="cb19-124"><a href="#cb19-124" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb19-125"><a href="#cb19-125" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-126"><a href="#cb19-126" aria-hidden="true" tabindex="-1"></a>BigQuery <span class="op">=</span> importlib.util.module_from_spec(importlib.util.spec_from_loader(<span class="st">'BigQuery'</span>, loader<span class="op">=</span><span class="va">None</span>))</span>
+<span id="cb19-127"><a href="#cb19-127" aria-hidden="true" tabindex="-1"></a><span class="bu">exec</span>(response.text, BigQuery.__dict__)</span>
+<span id="cb19-128"><a href="#cb19-128" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-129"><a href="#cb19-129" aria-hidden="true" tabindex="-1"></a><span class="co"># Initiatlize BigQuery Client</span></span>
+<span id="cb19-130"><a href="#cb19-130" aria-hidden="true" tabindex="-1"></a>client <span class="op">=</span> BigQuery.getBigQueryClient_Confidential2023UtahHTS()</span>
+<span id="cb19-131"><a href="#cb19-131" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb19-132"><a href="#cb19-132" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-133"><a href="#cb19-133" aria-hidden="true" tabindex="-1"></a><span class="fu"># Load Data</span></span>
+<span id="cb19-134"><a href="#cb19-134" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-135"><a href="#cb19-135" aria-hidden="true" tabindex="-1"></a><span class="fu">## UTA On-Board Survey</span></span>
+<span id="cb19-136"><a href="#cb19-136" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-139"><a href="#cb19-139" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
+<span id="cb19-140"><a href="#cb19-140" aria-hidden="true" tabindex="-1"></a><span class="co"># Read Processed UTA On-Board Survey Data directly from GitHub repo</span></span>
+<span id="cb19-141"><a href="#cb19-141" aria-hidden="true" tabindex="-1"></a>response <span class="op">=</span> fetch_github(</span>
+<span id="cb19-142"><a href="#cb19-142" aria-hidden="true" tabindex="-1"></a>    <span class="st">"https://raw.githubusercontent.com/WFRCAnalytics/DATA-OBS-Prep-For-TDM/refs/heads/main/_output/UTA_OBS_2024_Processed.csv"</span>,</span>
+<span id="cb19-143"><a href="#cb19-143" aria-hidden="true" tabindex="-1"></a>    mode <span class="op">=</span> <span class="st">"private"</span></span>
+<span id="cb19-144"><a href="#cb19-144" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb19-145"><a href="#cb19-145" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-146"><a href="#cb19-146" aria-hidden="true" tabindex="-1"></a>df_obs_processed <span class="op">=</span> pd.read_csv(io.StringIO(response.text))</span>
+<span id="cb19-147"><a href="#cb19-147" aria-hidden="true" tabindex="-1"></a>df_obs_processed</span>
+<span id="cb19-148"><a href="#cb19-148" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb19-149"><a href="#cb19-149" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-150"><a href="#cb19-150" aria-hidden="true" tabindex="-1"></a><span class="fu">## Household Travel Survey</span></span>
+<span id="cb19-151"><a href="#cb19-151" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-154"><a href="#cb19-154" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
+<span id="cb19-155"><a href="#cb19-155" aria-hidden="true" tabindex="-1"></a><span class="co"># Load Household-level data from 2023 Household Travel Survey</span></span>
+<span id="cb19-156"><a href="#cb19-156" aria-hidden="true" tabindex="-1"></a>df_hts_hh23 <span class="op">=</span> client.query(</span>
+<span id="cb19-157"><a href="#cb19-157" aria-hidden="true" tabindex="-1"></a>    <span class="st">"SELECT * FROM "</span> <span class="op">+</span> <span class="st">'wfrc-modeling-data.prd_tdm_hts_2023.hh'</span></span>
+<span id="cb19-158"><a href="#cb19-158" aria-hidden="true" tabindex="-1"></a>).to_dataframe()</span>
+<span id="cb19-159"><a href="#cb19-159" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-160"><a href="#cb19-160" aria-hidden="true" tabindex="-1"></a>df_hts_hh23</span>
+<span id="cb19-161"><a href="#cb19-161" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb19-162"><a href="#cb19-162" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-165"><a href="#cb19-165" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
+<span id="cb19-166"><a href="#cb19-166" aria-hidden="true" tabindex="-1"></a><span class="co"># Load Person-level data from 2023 Household Travel Survey</span></span>
+<span id="cb19-167"><a href="#cb19-167" aria-hidden="true" tabindex="-1"></a>df_hts_person23 <span class="op">=</span> client.query(</span>
+<span id="cb19-168"><a href="#cb19-168" aria-hidden="true" tabindex="-1"></a>    <span class="st">"SELECT * FROM "</span> <span class="op">+</span> <span class="st">'wfrc-modeling-data.prd_tdm_hts_2023.person'</span></span>
+<span id="cb19-169"><a href="#cb19-169" aria-hidden="true" tabindex="-1"></a>).to_dataframe()</span>
+<span id="cb19-170"><a href="#cb19-170" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-171"><a href="#cb19-171" aria-hidden="true" tabindex="-1"></a>df_hts_person23</span>
+<span id="cb19-172"><a href="#cb19-172" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb19-173"><a href="#cb19-173" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-174"><a href="#cb19-174" aria-hidden="true" tabindex="-1"></a><span class="fu"># Understanding Mode Hierarchy</span></span>
+<span id="cb19-175"><a href="#cb19-175" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-178"><a href="#cb19-178" aria-hidden="true" tabindex="-1"></a><span class="in">```{mermaid}</span></span>
+<span id="cb19-179"><a href="#cb19-179" aria-hidden="true" tabindex="-1"></a>flowchart LR</span>
+<span id="cb19-180"><a href="#cb19-180" aria-hidden="true" tabindex="-1"></a>  T[<span class="ot">"</span><span class="st">🚦 Total Trips</span><span class="ot">"</span>]</span>
+<span id="cb19-181"><a href="#cb19-181" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-182"><a href="#cb19-182" aria-hidden="true" tabindex="-1"></a>  %% Top-level <span class="fu">split</span></span>
+<span id="cb19-183"><a href="#cb19-183" aria-hidden="true" tabindex="-1"></a>  T --&gt; M[<span class="ot">"</span><span class="st">Motorized</span><span class="ot">"</span>]</span>
+<span id="cb19-184"><a href="#cb19-184" aria-hidden="true" tabindex="-1"></a>  T --&gt; NM[<span class="ot">"</span><span class="st">Non-motorized</span><span class="ot">"</span>]</span>
+<span id="cb19-185"><a href="#cb19-185" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-186"><a href="#cb19-186" aria-hidden="true" tabindex="-1"></a>  %% Motorized branch</span>
+<span id="cb19-187"><a href="#cb19-187" aria-hidden="true" tabindex="-1"></a>  subgraph S1[<span class="ot">"</span><span class="st">🚗 Motorized Transportation</span><span class="ot">"</span>]</span>
+<span id="cb19-188"><a href="#cb19-188" aria-hidden="true" tabindex="-1"></a>    direction TB</span>
+<span id="cb19-189"><a href="#cb19-189" aria-hidden="true" tabindex="-1"></a>    M --&gt; A[<span class="ot">"</span><span class="st">Auto</span><span class="ot">"</span>]</span>
+<span id="cb19-190"><a href="#cb19-190" aria-hidden="true" tabindex="-1"></a>    M --&gt; TR[<span class="ot">"</span><span class="st">Transit</span><span class="ot">"</span>]</span>
+<span id="cb19-191"><a href="#cb19-191" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-192"><a href="#cb19-192" aria-hidden="true" tabindex="-1"></a>    %% Auto</span>
+<span id="cb19-193"><a href="#cb19-193" aria-hidden="true" tabindex="-1"></a>    A --&gt; DA[<span class="ot">"</span><span class="st">Drive alone</span><span class="ot">"</span>]</span>
+<span id="cb19-194"><a href="#cb19-194" aria-hidden="true" tabindex="-1"></a>    A --&gt; SR[<span class="ot">"</span><span class="st">Shared ride</span><span class="ot">"</span>]</span>
+<span id="cb19-195"><a href="#cb19-195" aria-hidden="true" tabindex="-1"></a>    SR --&gt; SR2[<span class="ot">"</span><span class="st">SR2&lt;br/&gt;&lt;i&gt;2 people&lt;/i&gt;</span><span class="ot">"</span>]</span>
+<span id="cb19-196"><a href="#cb19-196" aria-hidden="true" tabindex="-1"></a>    SR --&gt; SR3[<span class="ot">"</span><span class="st">SR3&lt;br/&gt;&lt;i&gt;3+ people&lt;/i&gt;</span><span class="ot">"</span>]</span>
+<span id="cb19-197"><a href="#cb19-197" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-198"><a href="#cb19-198" aria-hidden="true" tabindex="-1"></a>    %% Transit (two complementary views)</span>
+<span id="cb19-199"><a href="#cb19-199" aria-hidden="true" tabindex="-1"></a>    subgraph S1a[<span class="ot">"</span><span class="st">🚌 Transit – By Service Type</span><span class="ot">"</span>]</span>
+<span id="cb19-200"><a href="#cb19-200" aria-hidden="true" tabindex="-1"></a>      direction TB</span>
+<span id="cb19-201"><a href="#cb19-201" aria-hidden="true" tabindex="-1"></a>      TR --&gt; TM[<span class="ot">"</span><span class="st">By modes</span><span class="ot">"</span>]</span>
+<span id="cb19-202"><a href="#cb19-202" aria-hidden="true" tabindex="-1"></a>      TM --&gt; LB[<span class="ot">"</span><span class="st">Local bus</span><span class="ot">"</span>]</span>
+<span id="cb19-203"><a href="#cb19-203" aria-hidden="true" tabindex="-1"></a>      TM --&gt; CB[<span class="ot">"</span><span class="st">Core bus</span><span class="ot">"</span>]</span>
+<span id="cb19-204"><a href="#cb19-204" aria-hidden="true" tabindex="-1"></a>      TM --&gt; EB[<span class="ot">"</span><span class="st">Express bus</span><span class="ot">"</span>]</span>
+<span id="cb19-205"><a href="#cb19-205" aria-hidden="true" tabindex="-1"></a>      TM --&gt; LRT[<span class="ot">"</span><span class="st">LRT&lt;br/&gt;&lt;i&gt;light rail&lt;/i&gt;</span><span class="ot">"</span>]</span>
+<span id="cb19-206"><a href="#cb19-206" aria-hidden="true" tabindex="-1"></a>      TM --&gt; CRT[<span class="ot">"</span><span class="st">CRT&lt;br/&gt;&lt;i&gt;commuter rail&lt;/i&gt;</span><span class="ot">"</span>]</span>
+<span id="cb19-207"><a href="#cb19-207" aria-hidden="true" tabindex="-1"></a>      TM --&gt; BRT[<span class="ot">"</span><span class="st">BRT&lt;br/&gt;&lt;i&gt;bus rapid&lt;/i&gt;</span><span class="ot">"</span>]</span>
+<span id="cb19-208"><a href="#cb19-208" aria-hidden="true" tabindex="-1"></a>    end</span>
+<span id="cb19-209"><a href="#cb19-209" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-210"><a href="#cb19-210" aria-hidden="true" tabindex="-1"></a>    subgraph S1b[<span class="ot">"</span><span class="st">🚶🚗 Transit – By Access Type</span><span class="ot">"</span>]</span>
+<span id="cb19-211"><a href="#cb19-211" aria-hidden="true" tabindex="-1"></a>      direction TB</span>
+<span id="cb19-212"><a href="#cb19-212" aria-hidden="true" tabindex="-1"></a>      TR --&gt; TA[<span class="ot">"</span><span class="st">By access type</span><span class="ot">"</span>]</span>
+<span id="cb19-213"><a href="#cb19-213" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-214"><a href="#cb19-214" aria-hidden="true" tabindex="-1"></a>      %% Walk-to-transit</span>
+<span id="cb19-215"><a href="#cb19-215" aria-hidden="true" tabindex="-1"></a>      TA --&gt; WTT[<span class="ot">"</span><span class="st">🚶 Walk-to-transit</span><span class="ot">"</span>]</span>
+<span id="cb19-216"><a href="#cb19-216" aria-hidden="true" tabindex="-1"></a>      WTT --&gt; WLB[<span class="ot">"</span><span class="st">Walk → Local bus</span><span class="ot">"</span>]</span>
+<span id="cb19-217"><a href="#cb19-217" aria-hidden="true" tabindex="-1"></a>      WTT --&gt; WCB[<span class="ot">"</span><span class="st">Walk → Core bus</span><span class="ot">"</span>]</span>
+<span id="cb19-218"><a href="#cb19-218" aria-hidden="true" tabindex="-1"></a>      WTT --&gt; WEB[<span class="ot">"</span><span class="st">Walk → Express bus</span><span class="ot">"</span>]</span>
+<span id="cb19-219"><a href="#cb19-219" aria-hidden="true" tabindex="-1"></a>      WTT --&gt; WLRT[<span class="ot">"</span><span class="st">Walk → LRT</span><span class="ot">"</span>]</span>
+<span id="cb19-220"><a href="#cb19-220" aria-hidden="true" tabindex="-1"></a>      WTT --&gt; WCRT[<span class="ot">"</span><span class="st">Walk → CRT</span><span class="ot">"</span>]</span>
+<span id="cb19-221"><a href="#cb19-221" aria-hidden="true" tabindex="-1"></a>      WTT --&gt; WBRT[<span class="ot">"</span><span class="st">Walk → BRT</span><span class="ot">"</span>]</span>
+<span id="cb19-222"><a href="#cb19-222" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-223"><a href="#cb19-223" aria-hidden="true" tabindex="-1"></a>      %% Drive-to-transit</span>
+<span id="cb19-224"><a href="#cb19-224" aria-hidden="true" tabindex="-1"></a>      TA --&gt; DTT[<span class="ot">"</span><span class="st">🚗 Drive-to-transit</span><span class="ot">"</span>]</span>
+<span id="cb19-225"><a href="#cb19-225" aria-hidden="true" tabindex="-1"></a>      DTT --&gt; DLB[<span class="ot">"</span><span class="st">Drive → Local bus</span><span class="ot">"</span>]</span>
+<span id="cb19-226"><a href="#cb19-226" aria-hidden="true" tabindex="-1"></a>      DTT --&gt; DCB[<span class="ot">"</span><span class="st">Drive → Core bus</span><span class="ot">"</span>]</span>
+<span id="cb19-227"><a href="#cb19-227" aria-hidden="true" tabindex="-1"></a>      DTT --&gt; DEB[<span class="ot">"</span><span class="st">Drive → Express bus</span><span class="ot">"</span>]</span>
+<span id="cb19-228"><a href="#cb19-228" aria-hidden="true" tabindex="-1"></a>      DTT --&gt; DLRT[<span class="ot">"</span><span class="st">Drive → LRT</span><span class="ot">"</span>]</span>
+<span id="cb19-229"><a href="#cb19-229" aria-hidden="true" tabindex="-1"></a>      DTT --&gt; DCRT[<span class="ot">"</span><span class="st">Drive → CRT</span><span class="ot">"</span>]</span>
+<span id="cb19-230"><a href="#cb19-230" aria-hidden="true" tabindex="-1"></a>      DTT --&gt; DBRT[<span class="ot">"</span><span class="st">Drive → BRT</span><span class="ot">"</span>]</span>
+<span id="cb19-231"><a href="#cb19-231" aria-hidden="true" tabindex="-1"></a>    end</span>
+<span id="cb19-232"><a href="#cb19-232" aria-hidden="true" tabindex="-1"></a>  end</span>
+<span id="cb19-233"><a href="#cb19-233" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-234"><a href="#cb19-234" aria-hidden="true" tabindex="-1"></a>  %% Non-motorized branch</span>
+<span id="cb19-235"><a href="#cb19-235" aria-hidden="true" tabindex="-1"></a>  subgraph S2[<span class="ot">"</span><span class="st">🚶 Non-motorized Transportation</span><span class="ot">"</span>]</span>
+<span id="cb19-236"><a href="#cb19-236" aria-hidden="true" tabindex="-1"></a>    direction TB</span>
+<span id="cb19-237"><a href="#cb19-237" aria-hidden="true" tabindex="-1"></a>    NM --&gt; WALK[<span class="ot">"</span><span class="st">Walk</span><span class="ot">"</span>]</span>
+<span id="cb19-238"><a href="#cb19-238" aria-hidden="true" tabindex="-1"></a>    NM --&gt; BIKE[<span class="ot">"</span><span class="st">Bike</span><span class="ot">"</span>]</span>
+<span id="cb19-239"><a href="#cb19-239" aria-hidden="true" tabindex="-1"></a>  end</span>
+<span id="cb19-240"><a href="#cb19-240" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-241"><a href="#cb19-241" aria-hidden="true" tabindex="-1"></a>  %% Styling</span>
+<span id="cb19-242"><a href="#cb19-242" aria-hidden="true" tabindex="-1"></a>  classDef rootNode fill:<span class="co">#2c3e50,stroke:#34495e,stroke-width:3px,color:#fff,font-weight:bold,font-size:16px</span></span>
+<span id="cb19-243"><a href="#cb19-243" aria-hidden="true" tabindex="-1"></a>  classDef motorizedNode fill:<span class="co">#3498db,stroke:#2980b9,stroke-width:2px,color:#fff,font-weight:bold</span></span>
+<span id="cb19-244"><a href="#cb19-244" aria-hidden="true" tabindex="-1"></a>  classDef nonMotorizedNode fill:<span class="co">#27ae60,stroke:#229954,stroke-width:2px,color:#fff,font-weight:bold</span></span>
+<span id="cb19-245"><a href="#cb19-245" aria-hidden="true" tabindex="-1"></a>  classDef autoNode fill:<span class="co">#e67e22,stroke:#d35400,stroke-width:2px,color:#fff</span></span>
+<span id="cb19-246"><a href="#cb19-246" aria-hidden="true" tabindex="-1"></a>  classDef transitNode fill:<span class="co">#9b59b6,stroke:#8e44ad,stroke-width:2px,color:#fff</span></span>
+<span id="cb19-247"><a href="#cb19-247" aria-hidden="true" tabindex="-1"></a>  classDef walkTransitNode fill:<span class="co">#1abc9c,stroke:#16a085,stroke-width:2px,color:#fff</span></span>
+<span id="cb19-248"><a href="#cb19-248" aria-hidden="true" tabindex="-1"></a>  classDef driveTransitNode fill:<span class="co">#e74c3c,stroke:#c0392b,stroke-width:2px,color:#fff</span></span>
+<span id="cb19-249"><a href="#cb19-249" aria-hidden="true" tabindex="-1"></a>  classDef leafNode fill:<span class="co">#ecf0f1,stroke:#95a5a6,stroke-width:1px,color:#2c3e50</span></span>
+<span id="cb19-250"><a href="#cb19-250" aria-hidden="true" tabindex="-1"></a>  classDef subgraphStyle fill:<span class="co">#f8f9fa,stroke:#dee2e6,stroke-width:2px</span></span>
+<span id="cb19-251"><a href="#cb19-251" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-252"><a href="#cb19-252" aria-hidden="true" tabindex="-1"></a>  class T rootNode</span>
+<span id="cb19-253"><a href="#cb19-253" aria-hidden="true" tabindex="-1"></a>  class M motorizedNode</span>
+<span id="cb19-254"><a href="#cb19-254" aria-hidden="true" tabindex="-1"></a>  class NM nonMotorizedNode</span>
+<span id="cb19-255"><a href="#cb19-255" aria-hidden="true" tabindex="-1"></a>  class A,DA,SR,SR2,SR3 autoNode</span>
+<span id="cb19-256"><a href="#cb19-256" aria-hidden="true" tabindex="-1"></a>  class TR,TM,TA transitNode</span>
+<span id="cb19-257"><a href="#cb19-257" aria-hidden="true" tabindex="-1"></a>  class WTT,WLB,WCB,WEB,WLRT,WCRT,WBRT walkTransitNode</span>
+<span id="cb19-258"><a href="#cb19-258" aria-hidden="true" tabindex="-1"></a>  class DTT,DLB,DCB,DEB,DLRT,DCRT,DBRT driveTransitNode</span>
+<span id="cb19-259"><a href="#cb19-259" aria-hidden="true" tabindex="-1"></a>  class LB,CB,EB,LRT,CRT,BRT,WALK,BIKE leafNode</span>
+<span id="cb19-260"><a href="#cb19-260" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb19-261"><a href="#cb19-261" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-262"><a href="#cb19-262" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-263"><a href="#cb19-263" aria-hidden="true" tabindex="-1"></a><span class="fu"># Identify Variable of Interest</span></span>
+<span id="cb19-264"><a href="#cb19-264" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-265"><a href="#cb19-265" aria-hidden="true" tabindex="-1"></a><span class="fu">## On-Board Survey</span></span>
+<span id="cb19-266"><a href="#cb19-266" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-267"><a href="#cb19-267" aria-hidden="true" tabindex="-1"></a><span class="fu">### Trip Purposes</span></span>
+<span id="cb19-268"><a href="#cb19-268" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-271"><a href="#cb19-271" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
+<span id="cb19-272"><a href="#cb19-272" aria-hidden="true" tabindex="-1"></a>df_obs_processed[<span class="st">"Purp5_text"</span>].value_counts() <span class="co"># Trip Purpose: HBW, HBO, HBC, NHB, HBSch</span></span>
+<span id="cb19-273"><a href="#cb19-273" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb19-274"><a href="#cb19-274" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-275"><a href="#cb19-275" aria-hidden="true" tabindex="-1"></a><span class="fu">### Peak vs Off-Peak</span></span>
+<span id="cb19-276"><a href="#cb19-276" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-279"><a href="#cb19-279" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
+<span id="cb19-280"><a href="#cb19-280" aria-hidden="true" tabindex="-1"></a>df_obs_processed[<span class="st">"PK_OK"</span>].value_counts() <span class="co"># Peak vs Off-Peak</span></span>
+<span id="cb19-281"><a href="#cb19-281" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb19-282"><a href="#cb19-282" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-283"><a href="#cb19-283" aria-hidden="true" tabindex="-1"></a><span class="fu">### Motorized vs Non-motorized</span></span>
+<span id="cb19-284"><a href="#cb19-284" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-287"><a href="#cb19-287" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
+<span id="cb19-288"><a href="#cb19-288" aria-hidden="true" tabindex="-1"></a>df_obs_processed[<span class="st">"Ac_Mode_Model"</span>].value_counts() <span class="co"># Motorized (Drive) vs Non-motorized (Walk)</span></span>
+<span id="cb19-289"><a href="#cb19-289" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb19-290"><a href="#cb19-290" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-291"><a href="#cb19-291" aria-hidden="true" tabindex="-1"></a><span class="fu">### Vehicle Ownership</span></span>
+<span id="cb19-292"><a href="#cb19-292" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-295"><a href="#cb19-295" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
+<span id="cb19-296"><a href="#cb19-296" aria-hidden="true" tabindex="-1"></a>df_obs_processed[<span class="st">"Veh_Cat3p"</span>].value_counts() <span class="co"># Vehile Ownership Category: 0, 1, 2, 3+</span></span>
+<span id="cb19-297"><a href="#cb19-297" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 </code></pre></div><button title="Copy to Clipboard" class="code-copy-button" data-in-quarto-modal=""><i class="bi"></i></button></div>
 </div></div></div></div></div>
 </div> <!-- /content -->
