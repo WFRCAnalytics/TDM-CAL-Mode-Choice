@@ -91,6 +91,185 @@ def fetch_github(
     return response
 ```
 
+```{python}
+def calculate_mode_shares(
+    df,
+    groupby_cols=['Veh_Cat3p', 'Purp5_text', 'PK_OK'],
+    mode_col='Linked_Mode_txt',
+    filter_conditions=None,
+    mode_mapping=None,
+    prefix='calib_share',
+    include_daily_only_purposes=['HBC', 'HBSch']
+):
+    """
+    Calculate mode shares with flexible grouping and filtering.
+
+    Parameters:
+    -----------
+    df : DataFrame
+        Input dataframe (OBS or HTS)
+    groupby_cols : list
+        Columns to group by (e.g., ['Veh_Cat3p', 'Purp5_text', 'PK_OK'])
+    mode_col : str
+        Column containing mode information
+    filter_conditions : dict or None
+        Dictionary of {column: value} to filter data before calculation
+        Example: {'Ac_Mode_Model': 'Walk'} for walk-to-transit only
+    mode_mapping : dict or None
+        Map mode values to standard names
+        Example: {'LCL': 'local', 'COR': 'core', ...}
+    prefix : str
+        Prefix for output column names (e.g., 'calib_share')
+    include_daily_only_purposes : list
+        Purposes to aggregate as 'Daily' instead of Peak/OffPeak
+
+    Returns:
+    --------
+    DataFrame with columns: Veh_Cat (0, 1, 2, all) x Purpose x Peak/OffPeak x Mode
+    """
+
+    # Make a copy and filter out MicroTransit
+    df_work = df.copy()
+    if 'Mode_Fin' in df_work.columns:
+        df_work = df_work[df_work['Mode_Fin'] != 1]  # Remove MicroTransit
+
+    # Apply additional filters if specified
+    if filter_conditions:
+        for col, val in filter_conditions.items():
+            df_work = df_work[df_work[col] == val]
+
+    # Apply mode mapping if provided
+    if mode_mapping and mode_col in df_work.columns:
+        df_work[mode_col] = df_work[mode_col].map(mode_mapping)
+
+    # Separate daily-only purposes from peak/offpeak purposes
+    df_daily_only = df_work[df_work['Purp5_text'].isin(include_daily_only_purposes)]
+    df_peak_offpeak = df_work[~df_work['Purp5_text'].isin(include_daily_only_purposes)]
+
+    results = []
+
+    # Process Peak/OffPeak purposes
+    if len(df_peak_offpeak) > 0:
+        # Calculate shares for each vehicle category
+        for veh_cat in [0, 1, 2]:
+            df_veh = df_peak_offpeak[df_peak_offpeak['Veh_Cat3p'] == veh_cat]
+
+            for purpose in df_veh['Purp5_text'].unique():
+                df_purp = df_veh[df_veh['Purp5_text'] == purpose]
+
+                for pk in df_purp['PK_OK'].unique():
+                    df_subset = df_purp[df_purp['PK_OK'] == pk]
+
+                    if len(df_subset) > 0:
+                        # Calculate mode shares
+                        mode_counts = df_subset[mode_col].value_counts()
+                        total = mode_counts.sum()
+                        mode_shares = (mode_counts / total).to_dict()
+
+                        # Add to results
+                        for mode, share in mode_shares.items():
+                            results.append({
+                                'Veh_Cat': veh_cat,
+                                'Purpose': purpose,
+                                'Period': pk,
+                                'Mode': mode,
+                                'Share': share
+                            })
+
+        # Calculate shares for "all" vehicle categories
+        for purpose in df_peak_offpeak['Purp5_text'].unique():
+            df_purp = df_peak_offpeak[df_peak_offpeak['Purp5_text'] == purpose]
+
+            for pk in df_purp['PK_OK'].unique():
+                df_subset = df_purp[df_purp['PK_OK'] == pk]
+
+                if len(df_subset) > 0:
+                    mode_counts = df_subset[mode_col].value_counts()
+                    total = mode_counts.sum()
+                    mode_shares = (mode_counts / total).to_dict()
+
+                    for mode, share in mode_shares.items():
+                        results.append({
+                            'Veh_Cat': 'all',
+                            'Purpose': purpose,
+                            'Period': pk,
+                            'Mode': mode,
+                            'Share': share
+                        })
+
+    # Process Daily-only purposes
+    if len(df_daily_only) > 0:
+        # Calculate shares for each vehicle category
+        for veh_cat in [0, 1, 2]:
+            df_veh = df_daily_only[df_daily_only['Veh_Cat3p'] == veh_cat]
+
+            for purpose in df_veh['Purp5_text'].unique():
+                df_purp = df_veh[df_veh['Purp5_text'] == purpose]
+
+                if len(df_purp) > 0:
+                    mode_counts = df_purp[mode_col].value_counts()
+                    total = mode_counts.sum()
+                    mode_shares = (mode_counts / total).to_dict()
+
+                    for mode, share in mode_shares.items():
+                        results.append({
+                            'Veh_Cat': veh_cat,
+                            'Purpose': purpose,
+                            'Period': 'Daily',
+                            'Mode': mode,
+                            'Share': share
+                        })
+
+        # Calculate shares for "all" vehicle categories
+        for purpose in df_daily_only['Purp5_text'].unique():
+            df_purp = df_daily_only[df_daily_only['Purp5_text'] == purpose]
+
+            if len(df_purp) > 0:
+                mode_counts = df_purp[mode_col].value_counts()
+                total = mode_counts.sum()
+                mode_shares = (mode_counts / total).to_dict()
+
+                for mode, share in mode_shares.items():
+                    results.append({
+                        'Veh_Cat': 'all',
+                        'Purpose': purpose,
+                        'Period': 'Daily',
+                        'Mode': mode,
+                        'Share': share
+                    })
+
+    # Convert to DataFrame
+    df_result = pd.DataFrame(results)
+
+    # Pivot to wide format matching target structure
+    if len(df_result) > 0:
+        df_wide = df_result.pivot_table(
+            index=['Veh_Cat', 'Mode'],
+            columns=['Purpose', 'Period'],
+            values='Share',
+            fill_value=0
+        )
+
+        # Flatten column names
+        df_wide.columns = [f"{col[0]}_{col[1]}" for col in df_wide.columns]
+        df_wide = df_wide.reset_index()
+
+        # Create row names matching target format
+        df_wide['variable'] = df_wide.apply(
+            lambda row: f"{prefix}_{row['Mode'].lower()}_{row['Veh_Cat']}veh"
+            if row['Veh_Cat'] != 'all'
+            else f"{prefix}_{row['Mode'].lower()}_all",
+            axis=1
+        )
+
+        df_wide = df_wide.drop(['Veh_Cat', 'Mode'], axis=1)
+        df_wide = df_wide.set_index('variable')
+
+        return df_wide
+    else:
+        return pd.DataFrame()
+```
+
 ## Setup BigQuery
 
 ```{python}
@@ -127,34 +306,25 @@ client = BigQuery.getBigQueryClient_Confidential2023UtahHTS()
 ## UTA On-Board Survey
 
 ```{python}
-# Read Processed UTA On-Board Survey Data directly from GitHub repo
+# Read Linked UTA On-Board Survey Data directly from GitHub repo
 response = fetch_github(
-    "https://raw.githubusercontent.com/WFRCAnalytics/DATA-OBS-Prep-For-TDM/refs/heads/main/_output/UTA_OBS_2024_Processed.csv",
+    "https://raw.githubusercontent.com/WFRCAnalytics/DATA-OBS-Prep-For-TDM/refs/heads/main/_output/UTA_OBS_2024_Linked.csv",
     mode = "private"
 )
 
-df_obs_processed = pd.read_csv(io.StringIO(response.text))
-df_obs_processed
+df_obs_linked = pd.read_csv(io.StringIO(response.text))
+df_obs_linked
 ```
 
 ## Household Travel Survey
 
 ```{python}
-# Load Household-level data from 2023 Household Travel Survey
-df_hts_hh23 = client.query(
-    "SELECT * FROM " + 'wfrc-modeling-data.prd_tdm_hts_2023.hh'
+# Load Linked Trips data from 2023 Household Travel Survey
+df_hts_linked = client.query(
+    "SELECT * FROM " + 'wfrc-modeling-data.prd_tdm_hts_2023.trip_linked'
 ).to_dataframe()
 
-df_hts_hh23
-```
-
-```{python}
-# Load Person-level data from 2023 Household Travel Survey
-df_hts_person23 = client.query(
-    "SELECT * FROM " + 'wfrc-modeling-data.prd_tdm_hts_2023.person'
-).to_dataframe()
-
-df_hts_person23
+df_hts_linked
 ```
 
 # Understanding Mode Hierarchy
@@ -182,7 +352,7 @@ flowchart LR
     %% Transit (two complementary views)
     subgraph S1a["🚌 Transit – By Service Type"]
       direction TB
-      TR --> TM["By modes"]
+      TR --> TM["By service type"]
       TM --> LB["Local bus"]
       TM --> CB["Core bus"]
       TM --> EB["Express bus"]
@@ -251,25 +421,159 @@ flowchart LR
 ### Trip Purposes
 
 ```{python}
-df_obs_processed["Purp5_text"].value_counts() # Trip Purpose: HBW, HBO, HBC, NHB, HBSch
+df_obs_linked["Purp5_text"].value_counts() # Trip Purpose: HBW, HBO, HBC, NHB, HBSch
 ```
 
 ### Peak vs Off-Peak
 
 ```{python}
-df_obs_processed["PK_OK"].value_counts() # Peak vs Off-Peak
+df_obs_linked["PK_OK"].value_counts() # Peak vs Off-Peak
 ```
 
 ### Motorized vs Non-motorized
 
 ```{python}
-df_obs_processed["Ac_Mode_Model"].value_counts() # Motorized (Drive) vs Non-motorized (Walk)
+df_obs_linked["Ac_Mode_Model"].value_counts() # Motorized (Drive) vs Non-motorized (Walk)
 ```
 
 ### Vehicle Ownership
 
 ```{python}
-df_obs_processed["Veh_Cat3p"].value_counts() # Vehile Ownership Category: 0, 1, 2, 3+
+df_obs_linked["Veh_Cat3p"].value_counts() # Vehile Ownership Category: 0, 1, 2, 3+
 ```
 
-## Household Travel Survey
+# Trips: Motorized vs Non-motorized
+
+
+
+## Non-motorized Trips: Walk vs Bike
+
+
+
+## Motorized Trips: Auto vs Transit
+
+
+
+### Auto Trips: Drive Alone vs Shared Rides
+
+
+
+#### Shared Rides: 2 People vs 3+ People
+
+
+
+### Transit Trips: By Service and By Access Mode
+
+#### By Service Type
+
+```{python}
+df_obs_linked[[
+    "Linked_Mode_txt", # Linked Mode: MT = MicroTransit (dont need), LCL = local bus, COR = Core Bus, EXP = Express Bus, LRT = Light Rail Transit (TRAX), CRT = Commuter Rail Transit (FrontRunner), BRT = Bus Rapid Transit (OVX, UVX)
+    "Purp5_text", # Trip Purpose: HBW = Home-based Work, HBO = Home-based Other, HBC = Home-based College, NHB = Non-home based, HBSch = Home-based School
+    "PK_OK", # Peak vs OffPeak
+    "Veh_Cat3p", # Vehicle Ownership: 0 = 0 Vehicle Household, 1 = 1 Vehicle Household, 2 = 2 Vehicle Household, 3 = 3+ Vehicle Household
+    "Mode_Fin", # Current Mode: 1 = MT = MicroTransit (Dont need),  4 = LCL = local bus, 5 = COR = Core Bus, 6 = EXP = Express Bus, 7 = LRT = Light Rail Transit (TRAX), 8 = CRT = Commuter Rail Transit, 9 = BRT = Bus Rapid Transit (OVX, UVX)
+    "Ac_Mode_Model", # Access Mode to Transit: Walk (Walk to Transit), Drive (Drive to Transit)
+]].describe()
+```
+
+```{python}
+# Mode mapping for service types
+service_type_mapping = {
+    'LCL': 'local',
+    'COR': 'core',
+    'EXP': 'express',
+    'LRT': 'lrt',
+    'CRT': 'crt',
+    'BRT': 'brt'
+}
+
+df_transit_by_service = calculate_mode_shares(
+    df=df_obs_linked,
+    mode_col='Linked_Mode_txt',
+    filter_conditions=None,  # Use all transit trips
+    mode_mapping=service_type_mapping,
+    prefix='calib_share'
+)
+
+print("Transit by Service Type:")
+display(df_transit_by_service)
+```
+
+#### By Access Mode: Walk vs Drive to Transit
+
+```{python}
+access_type_mapping = {
+    'Walk': 'walk-to-transit',
+    'Drive': 'drive-to-transit'
+}
+
+df_transit_by_access = calculate_mode_shares(
+    df=df_obs_linked,
+    mode_col='Ac_Mode_Model',
+    filter_conditions=None,  # Use all transit trips
+    mode_mapping=access_type_mapping,
+    prefix='calib_share'
+)
+
+print("\nTransit by Access Type:")
+display(df_transit_by_access)
+```
+
+##### Walk to Transit
+
+```{python}
+df_walk_transit_by_service = calculate_mode_shares(
+    df=df_obs_linked,
+    mode_col='Linked_Mode_txt',
+    filter_conditions={'Ac_Mode_Model': 'Walk'},
+    mode_mapping={
+        'LCL': 'walk-local',
+        'COR': 'walk-core',
+        'EXP': 'walk-express',
+        'LRT': 'walk-lrt',
+        'CRT': 'walk-crt',
+        'BRT': 'walk-brt'
+    },
+    prefix='calib_share'
+)
+
+print("\nWalk-to-Transit by Service Type:")
+display(df_walk_transit_by_service)
+```
+
+##### Drive to Transit
+
+
+```{python}
+df_drive_transit_by_service = calculate_mode_shares(
+    df=df_obs_linked,
+    mode_col='Linked_Mode_txt',
+    filter_conditions={'Ac_Mode_Model': 'Drive'},
+    mode_mapping={
+        'LCL': 'drive-local',
+        'COR': 'drive-core',
+        'EXP': 'drive-express',
+        'LRT': 'drive-lrt',
+        'CRT': 'drive-crt',
+        'BRT': 'drive-brt'
+    },
+    prefix='calib_share'
+)
+
+print("\nDrive-to-Transit by Service Type:")
+display(df_drive_transit_by_service)
+```
+
+```{python}
+# Concatenate all results
+df_all_transit_shares = pd.concat([
+    df_transit_by_service,
+    df_transit_by_access,
+    df_walk_transit_by_service,
+    df_drive_transit_by_service
+], axis=0)
+
+print("\nAll Transit Shares Combined:")
+display(df_all_transit_shares)
+```
