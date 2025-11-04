@@ -28,24 +28,16 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from pathlib import Path
 
+import importlib.util
+from pathlib import Path
+import sys
 import os
 import requests
 import io
+
 from dotenv import load_dotenv
 load_dotenv()
-```
-
-## Setup BigQuery
-
-```{python}
-# import global TDM functions
-import sys
-sys.path.insert(0, '../Resources/2-Python/global-functions')
-import BigQuery
-
-client = BigQuery.getBigQueryClient_Confidential2023UtahHTS()
 ```
 
 ## Environment Variables
@@ -55,9 +47,6 @@ client = BigQuery.getBigQueryClient_Confidential2023UtahHTS()
 ## Helper Functions
 
 ```{python}
-import os
-import requests
-
 def fetch_github(
     url: str,
     mode: str = "private",
@@ -102,28 +91,96 @@ def fetch_github(
     return response
 ```
 
+## Setup BigQuery
+
+```{python}
+#| eval: false
+#| echo: false
+
+# # Import global TDM functions from local 'Resource' clone
+
+# import sys
+# sys.path.insert(0, '../Resources/2-Python/global-functions')
+# import BigQuery
+
+# client = BigQuery.getBigQueryClient_Confidential2023UtahHTS()
+```
+
+```{python}
+# # Import global TDM functions from remote 'Resource' repo
+
+# Fetch and import BigQuery module
+response = fetch_github(
+    'https://raw.githubusercontent.com/WFRCAnalytics/Resources/refs/heads/master/2-Python/global-functions/BigQuery.py',
+    mode="public"
+)
+
+BigQuery = importlib.util.module_from_spec(importlib.util.spec_from_loader('BigQuery', loader=None))
+exec(response.text, BigQuery.__dict__)
+
+# Initiatlize BigQuery Client
+client = BigQuery.getBigQueryClient_Confidential2023UtahHTS()
+```
+
 # Load Data
 
 ## UTA On-Board Survey
 
 ```{python}
+# Read Processed UTA On-Board Survey Data directly from GitHub repo
 response = fetch_github(
-    "https://raw.githubusercontent.com/WFRCAnalytics/DATA-OBS-Prep-For-TDM/refs/heads/main/_output/UTA_OBS_2024_Processed.csv"
+    "https://raw.githubusercontent.com/WFRCAnalytics/DATA-OBS-Prep-For-TDM/refs/heads/main/_output/UTA_OBS_2024_Processed.csv",
+    mode = "private"
 )
+
 df_obs_processed = pd.read_csv(io.StringIO(response.text))
+df_obs_processed
 ```
 
 ## Household Travel Survey
 
 ```{python}
-hts_hh_23 = client.query("SELECT * FROM " + 'wfrc-modeling-data.prd_tdm_hts_2023.hh').to_dataframe()
+# Load Household-level data from 2023 Household Travel Survey
+df_hts_hh23 = client.query(
+    "SELECT * FROM " + 'wfrc-modeling-data.prd_tdm_hts_2023.hh'
+).to_dataframe()
 
-hts_hh_23
+df_hts_hh23
 ```
 
+```{python}
+# Load Person-level data from 2023 Household Travel Survey
+df_hts_person23 = client.query(
+    "SELECT * FROM " + 'wfrc-modeling-data.prd_tdm_hts_2023.person'
+).to_dataframe()
+
+df_hts_person23
+```
+
+# Identify Variable of Interest
+
+## On-Board Survey
+
+### Trip Purposes
 
 ```{python}
-hts_person_23 = client.query("SELECT * FROM " + 'wfrc-modeling-data.prd_tdm_hts_2023.person').to_dataframe()
+df_obs_processed["Purp5_text"].value_counts() # Trip Purpose: HBW, HBO, HBC, NHB, HBSch
+```
 
-hts_person_23
+### Peak vs Off-Peak
+
+```{python}
+df_obs_processed["PK_OK"].value_counts() # Peak vs Off-Peak
+```
+
+### Motorized vs Non-motorized
+
+```{python}
+df_obs_processed["Ac_Mode_Model"].value_counts() # Motorized (Drive) vs Non-motorized (Walk)
+```
+
+### Vehicle Ownership
+
+```{python}
+df_obs_processed["Veh_Cat3p"].value_counts() # Vehile Ownership Category: 0, 1, 2, 3+
 ```
