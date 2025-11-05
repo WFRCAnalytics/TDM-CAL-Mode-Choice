@@ -92,182 +92,170 @@ def fetch_github(
 ```
 
 ```{python}
-def calculate_mode_shares(
+def calculate_categorical_shares(
     df,
-    groupby_cols=['Veh_Cat3p', 'Purp5_text', 'PK_OK'],
-    mode_col='Linked_Mode_txt',
-    filter_conditions=None,
-    mode_mapping=None,
-    prefix='calib_share',
-    include_daily_only_purposes=['HBC', 'HBSch']
+    category_col,
+    weight_col='LINKED_WEIGHT',
+    group_cols=['Veh_Cat3p', 'Purp5_text', 'PK_OK'],
+    filter_condition=None,
+    category_mapping=None,
+    prefix='share',
+    exclude_daily_purposes=['HBW', 'HBO', 'NHB']  # Only HBC and HBSch get daily
 ):
     """
-    Calculate mode shares with flexible grouping and filtering.
+    Calculate weighted shares of categories within groups, ensuring they sum to 1.
 
     Parameters:
     -----------
     df : DataFrame
-        Input dataframe (OBS or HTS)
-    groupby_cols : list
-        Columns to group by (e.g., ['Veh_Cat3p', 'Purp5_text', 'PK_OK'])
-    mode_col : str
-        Column containing mode information
-    filter_conditions : dict or None
-        Dictionary of {column: value} to filter data before calculation
-        Example: {'Ac_Mode_Model': 'Walk'} for walk-to-transit only
-    mode_mapping : dict or None
-        Map mode values to standard names
-        Example: {'LCL': 'local', 'COR': 'core', ...}
+        Input dataframe
+    category_col : str
+        Column containing the categories to calculate shares for
+    weight_col : str
+        Column containing weights for each observation
+    group_cols : list
+        Columns to group by (e.g., vehicle ownership, purpose, peak/off-peak)
+    filter_condition : str or None
+        Optional pandas query string to filter data before calculation
+    category_mapping : dict or None
+        Optional mapping to rename/recode categories
     prefix : str
-        Prefix for output column names (e.g., 'calib_share')
-    include_daily_only_purposes : list
-        Purposes to aggregate as 'Daily' instead of Peak/OffPeak
+        Prefix for output column names
+    exclude_daily_purposes : list
+        Purposes that should NOT get daily aggregates (only peak/off-peak)
 
     Returns:
     --------
-    DataFrame with columns: Veh_Cat (0, 1, 2, all) x Purpose x Peak/OffPeak x Mode
+    DataFrame with shares in wide format
     """
 
-    # Make a copy and filter out MicroTransit
+    # Start with a copy
     df_work = df.copy()
-    if 'Mode_Fin' in df_work.columns:
-        df_work = df_work[df_work['Mode_Fin'] != 1]  # Remove MicroTransit
 
-    # Apply additional filters if specified
-    if filter_conditions:
-        for col, val in filter_conditions.items():
-            df_work = df_work[df_work[col] == val]
+    # Apply filter if provided
+    if filter_condition:
+        df_work = df_work.query(filter_condition)
 
-    # Apply mode mapping if provided
-    if mode_mapping and mode_col in df_work.columns:
-        df_work[mode_col] = df_work[mode_col].map(mode_mapping)
+    # Apply category mapping if provided
+    if category_mapping:
+        df_work[category_col] = df_work[category_col].map(category_mapping)
+        # Remove unmapped values
+        df_work = df_work.dropna(subset=[category_col])
 
-    # Separate daily-only purposes from peak/offpeak purposes
-    df_daily_only = df_work[df_work['Purp5_text'].isin(include_daily_only_purposes)]
-    df_peak_offpeak = df_work[~df_work['Purp5_text'].isin(include_daily_only_purposes)]
+    # Remove any NaN values in key columns
+    df_work = df_work.dropna(subset=[category_col, weight_col] + group_cols)
 
-    results = []
+    # Initialize results dictionary
+    results = {}
 
-    # Process Peak/OffPeak purposes
-    if len(df_peak_offpeak) > 0:
-        # Calculate shares for each vehicle category
-        for veh_cat in [0, 1, 2]:
-            df_veh = df_peak_offpeak[df_peak_offpeak['Veh_Cat3p'] == veh_cat]
+    # Calculate weighted shares for each group combination
+    for veh in sorted(df_work['Veh_Cat3p'].unique()):
+        for purpose in sorted(df_work['Purp5_text'].unique()):
+            for peak in sorted(df_work['PK_OK'].unique()):
+                subset = df_work.query(
+                    f"Veh_Cat3p == '{veh}' & Purp5_text == '{purpose}' & PK_OK == '{peak}'"
+                )
 
-            for purpose in df_veh['Purp5_text'].unique():
-                df_purp = df_veh[df_veh['Purp5_text'] == purpose]
+                if len(subset) > 0:
+                    # Calculate weighted counts by category
+                    weighted_counts = subset.groupby(category_col)[weight_col].sum()
+                    total_weight = subset[weight_col].sum()
 
-                for pk in df_purp['PK_OK'].unique():
-                    df_subset = df_purp[df_purp['PK_OK'] == pk]
+                    for cat, weighted_count in weighted_counts.items():
+                        var_name = f"{prefix}_{cat}_{veh}veh"
+                        if var_name not in results:
+                            results[var_name] = {}
+                        results[var_name][(purpose, peak)] = weighted_count / total_weight
 
-                    if len(df_subset) > 0:
-                        # Calculate mode shares
-                        mode_counts = df_subset[mode_col].value_counts()
-                        total = mode_counts.sum()
-                        mode_shares = (mode_counts / total).to_dict()
+    # Calculate "_all" aggregates (across all vehicle categories)
+    for purpose in sorted(df_work['Purp5_text'].unique()):
+        for peak in sorted(df_work['PK_OK'].unique()):
+            subset = df_work.query(f"Purp5_text == '{purpose}' & PK_OK == '{peak}'")
 
-                        # Add to results
-                        for mode, share in mode_shares.items():
-                            results.append({
-                                'Veh_Cat': veh_cat,
-                                'Purpose': purpose,
-                                'Period': pk,
-                                'Mode': mode,
-                                'Share': share
-                            })
+            if len(subset) > 0:
+                weighted_counts = subset.groupby(category_col)[weight_col].sum()
+                total_weight = subset[weight_col].sum()
 
-        # Calculate shares for "all" vehicle categories
-        for purpose in df_peak_offpeak['Purp5_text'].unique():
-            df_purp = df_peak_offpeak[df_peak_offpeak['Purp5_text'] == purpose]
+                for cat, weighted_count in weighted_counts.items():
+                    var_name = f"{prefix}_{cat}_all"
+                    if var_name not in results:
+                        results[var_name] = {}
+                    results[var_name][(purpose, peak)] = weighted_count / total_weight
 
-            for pk in df_purp['PK_OK'].unique():
-                df_subset = df_purp[df_purp['PK_OK'] == pk]
+    # Calculate daily aggregates for HBC and HBSch only
+    daily_purposes = [p for p in df_work['Purp5_text'].unique()
+                     if p not in exclude_daily_purposes]
 
-                if len(df_subset) > 0:
-                    mode_counts = df_subset[mode_col].value_counts()
-                    total = mode_counts.sum()
-                    mode_shares = (mode_counts / total).to_dict()
+    for purpose in daily_purposes:
+        subset = df_work.query(f"Purp5_text == '{purpose}'")
 
-                    for mode, share in mode_shares.items():
-                        results.append({
-                            'Veh_Cat': 'all',
-                            'Purpose': purpose,
-                            'Period': pk,
-                            'Mode': mode,
-                            'Share': share
-                        })
+        if len(subset) > 0:
+            # For each vehicle category
+            for veh in sorted(df_work['Veh_Cat3p'].unique()):
+                veh_subset = subset.query(f"Veh_Cat3p == '{veh}'")
+                if len(veh_subset) > 0:
+                    weighted_counts = veh_subset.groupby(category_col)[weight_col].sum()
+                    total_weight = veh_subset[weight_col].sum()
 
-    # Process Daily-only purposes
-    if len(df_daily_only) > 0:
-        # Calculate shares for each vehicle category
-        for veh_cat in [0, 1, 2]:
-            df_veh = df_daily_only[df_daily_only['Veh_Cat3p'] == veh_cat]
+                    for cat, weighted_count in weighted_counts.items():
+                        var_name = f"{prefix}_{cat}_{veh}veh"
+                        if var_name not in results:
+                            results[var_name] = {}
+                        results[var_name][(purpose, 'Daily')] = weighted_count / total_weight
 
-            for purpose in df_veh['Purp5_text'].unique():
-                df_purp = df_veh[df_veh['Purp5_text'] == purpose]
+            # For "all" vehicle categories
+            weighted_counts = subset.groupby(category_col)[weight_col].sum()
+            total_weight = subset[weight_col].sum()
 
-                if len(df_purp) > 0:
-                    mode_counts = df_purp[mode_col].value_counts()
-                    total = mode_counts.sum()
-                    mode_shares = (mode_counts / total).to_dict()
-
-                    for mode, share in mode_shares.items():
-                        results.append({
-                            'Veh_Cat': veh_cat,
-                            'Purpose': purpose,
-                            'Period': 'Daily',
-                            'Mode': mode,
-                            'Share': share
-                        })
-
-        # Calculate shares for "all" vehicle categories
-        for purpose in df_daily_only['Purp5_text'].unique():
-            df_purp = df_daily_only[df_daily_only['Purp5_text'] == purpose]
-
-            if len(df_purp) > 0:
-                mode_counts = df_purp[mode_col].value_counts()
-                total = mode_counts.sum()
-                mode_shares = (mode_counts / total).to_dict()
-
-                for mode, share in mode_shares.items():
-                    results.append({
-                        'Veh_Cat': 'all',
-                        'Purpose': purpose,
-                        'Period': 'Daily',
-                        'Mode': mode,
-                        'Share': share
-                    })
+            for cat, weighted_count in weighted_counts.items():
+                var_name = f"{prefix}_{cat}_all"
+                if var_name not in results:
+                    results[var_name] = {}
+                results[var_name][(purpose, 'Daily')] = weighted_count / total_weight
 
     # Convert to DataFrame
-    df_result = pd.DataFrame(results)
+    df_result = pd.DataFrame(results).T
+    df_result.columns = pd.MultiIndex.from_tuples(df_result.columns)
+    df_result = df_result.fillna(0)
 
-    # Pivot to wide format matching target structure
-    if len(df_result) > 0:
-        df_wide = df_result.pivot_table(
-            index=['Veh_Cat', 'Mode'],
-            columns=['Purpose', 'Period'],
-            values='Share',
-            fill_value=0
-        )
+    # Sort index
+    df_result = df_result.sort_index()
 
-        # Flatten column names
-        df_wide.columns = [f"{col[0]}_{col[1]}" for col in df_wide.columns]
-        df_wide = df_wide.reset_index()
+    return df_result
+```
 
-        # Create row names matching target format
-        df_wide['variable'] = df_wide.apply(
-            lambda row: f"{prefix}_{row['Mode'].lower()}_{row['Veh_Cat']}veh"
-            if row['Veh_Cat'] != 'all'
-            else f"{prefix}_{row['Mode'].lower()}_all",
-            axis=1
-        )
+```{python}
+# Verify categorical shares sum to 1.0000
+def verify_shares(df_shares, tolerance=0.01):
+    """
+    Verify that shares sum to approximately 1 within each group.
+    """
+    print("=== Verifying Share Sums ===\n")
 
-        df_wide = df_wide.drop(['Veh_Cat', 'Mode'], axis=1)
-        df_wide = df_wide.set_index('variable')
+    # Check sums for each column
+    all_good = True
+    issues = []
 
-        return df_wide
+    for col in df_shares.columns:
+        col_sum = df_shares[col].sum()
+
+        if abs(col_sum - 1.0) > tolerance:
+            all_good = False
+            issues.append((col, col_sum))
+
+    if all_good:
+        print("✅ All shares sum to 1.0 (within tolerance)")
     else:
-        return pd.DataFrame()
+        print(f"⚠️  Warning: {len(issues)} columns don't sum to 1.0:\n")
+        for col, sum_val in issues[:10]:  # Show first 10
+            print(f"   {col}: {sum_val:.4f}")
+        if len(issues) > 10:
+            print(f"   ... and {len(issues) - 10} more")
+
+    print(f"\nTotal columns: {len(df_shares.columns)}")
+    print(f"Columns with correct sums: {len(df_shares.columns) - len(issues)}")
+
+    return df_shares.sum(axis=0)
 ```
 
 ## Setup BigQuery
@@ -418,28 +406,15 @@ flowchart LR
 
 ## On-Board Survey
 
-### Trip Purposes
-
 ```{python}
-df_obs_linked["Purp5_text"].value_counts() # Trip Purpose: HBW, HBO, HBC, NHB, HBSch
-```
-
-### Peak vs Off-Peak
-
-```{python}
-df_obs_linked["PK_OK"].value_counts() # Peak vs Off-Peak
-```
-
-### Motorized vs Non-motorized
-
-```{python}
-df_obs_linked["Ac_Mode_Model"].value_counts() # Motorized (Drive) vs Non-motorized (Walk)
-```
-
-### Vehicle Ownership
-
-```{python}
-df_obs_linked["Veh_Cat3p"].value_counts() # Vehile Ownership Category: 0, 1, 2, 3+
+df_obs_linked[[
+    "Linked_Mode_txt", # Linked Mode: MT = MicroTransit (dont need), LCL = local bus, COR = Core Bus, EXP = Express Bus, LRT = Light Rail Transit (TRAX), CRT = Commuter Rail Transit (FrontRunner), BRT = Bus Rapid Transit (OVX, UVX)
+    "Purp5_text", # Trip Purpose: HBW = Home-based Work, HBO = Home-based Other, HBC = Home-based College, NHB = Non-home based, HBSch = Home-based School
+    "PK_OK", # Peak vs OffPeak
+    "Veh_Cat3p", # Vehicle Ownership: 0 = 0 Vehicle Household, 1 = 1 Vehicle Household, 2 = 2 Vehicle Household, 3 = 3+ Vehicle Household
+    "Mode_Fin", # Current Mode: 1 = MT = MicroTransit (Dont need),  4 = LCL = local bus, 5 = COR = Core Bus, 6 = EXP = Express Bus, 7 = LRT = Light Rail Transit (TRAX), 8 = CRT = Commuter Rail Transit, 9 = BRT = Bus Rapid Transit (OVX, UVX)
+    "Ac_Mode_Model", # Access Mode to Transit: Walk (Walk to Transit), Drive (Drive to Transit)
+]]
 ```
 
 # Trips: Motorized vs Non-motorized
@@ -467,19 +442,12 @@ df_obs_linked["Veh_Cat3p"].value_counts() # Vehile Ownership Category: 0, 1, 2, 
 #### By Service Type
 
 ```{python}
-df_obs_linked[[
-    "Linked_Mode_txt", # Linked Mode: MT = MicroTransit (dont need), LCL = local bus, COR = Core Bus, EXP = Express Bus, LRT = Light Rail Transit (TRAX), CRT = Commuter Rail Transit (FrontRunner), BRT = Bus Rapid Transit (OVX, UVX)
-    "Purp5_text", # Trip Purpose: HBW = Home-based Work, HBO = Home-based Other, HBC = Home-based College, NHB = Non-home based, HBSch = Home-based School
-    "PK_OK", # Peak vs OffPeak
-    "Veh_Cat3p", # Vehicle Ownership: 0 = 0 Vehicle Household, 1 = 1 Vehicle Household, 2 = 2 Vehicle Household, 3 = 3+ Vehicle Household
-    "Mode_Fin", # Current Mode: 1 = MT = MicroTransit (Dont need),  4 = LCL = local bus, 5 = COR = Core Bus, 6 = EXP = Express Bus, 7 = LRT = Light Rail Transit (TRAX), 8 = CRT = Commuter Rail Transit, 9 = BRT = Bus Rapid Transit (OVX, UVX)
-    "Ac_Mode_Model", # Access Mode to Transit: Walk (Walk to Transit), Drive (Drive to Transit)
-]].describe()
-```
+# 1. Transit by Service Type (within linked transit trips)
+print("\n" + "=" * 60)
+print("1. TRANSIT BY SERVICE TYPE")
+print("=" * 60)
 
-```{python}
-# Mode mapping for service types
-service_type_mapping = {
+service_mapping = {
     'LCL': 'local',
     'COR': 'core',
     'EXP': 'express',
@@ -488,92 +456,117 @@ service_type_mapping = {
     'BRT': 'brt'
 }
 
-df_transit_by_service = calculate_mode_shares(
-    df=df_obs_linked,
-    mode_col='Linked_Mode_txt',
-    filter_conditions=None,  # Use all transit trips
-    mode_mapping=service_type_mapping,
+df_transit_by_service = calculate_categorical_shares(
+    df_obs_linked,
+    category_col='Linked_Mode_txt',
+    weight_col='LINKED_WEIGHT',
+    group_cols=['Veh_Cat3p', 'Purp5_text', 'PK_OK'],
+    filter_condition='Linked_Mode_txt != "MT"',
+    category_mapping=service_mapping,
     prefix='calib_share'
 )
 
-print("Transit by Service Type:")
-display(df_transit_by_service)
+print("\nShape:", df_transit_by_service.shape)
+print("\nFirst few rows:")
+print(df_transit_by_service.head(10))
+print("\nVerification:")
+verify_shares(df_transit_by_service)
 ```
 
 #### By Access Mode: Walk vs Drive to Transit
 
 ```{python}
-access_type_mapping = {
-    'Walk': 'walk-to-transit',
-    'Drive': 'drive-to-transit'
+# 2. Transit by Access Type (Walk vs Drive) (within linked transit trips)
+print("\n" + "=" * 60)
+print("2. TRANSIT BY ACCESS TYPE")
+print("=" * 60)
+
+access_mapping = {
+    'Walk': 'walkacc',
+    'Drive': 'driveacc'
 }
 
-df_transit_by_access = calculate_mode_shares(
-    df=df_obs_linked,
-    mode_col='Ac_Mode_Model',
-    filter_conditions=None,  # Use all transit trips
-    mode_mapping=access_type_mapping,
+df_transit_by_access = calculate_categorical_shares(
+    df_obs_linked,
+    category_col='Ac_Mode_Model',
+    weight_col='LINKED_WEIGHT',
+    group_cols=['Veh_Cat3p', 'Purp5_text', 'PK_OK'],
+    filter_condition='Linked_Mode_txt != "MT"',
+    category_mapping=access_mapping,
     prefix='calib_share'
 )
 
-print("\nTransit by Access Type:")
-display(df_transit_by_access)
+print("\nShape:", df_transit_by_access.shape)
+print("\nFirst few rows:")
+print(df_transit_by_access.head(10))
+print("\nVerification:")
+verify_shares(df_transit_by_access)
 ```
 
 ##### Walk to Transit
 
 ```{python}
-df_walk_transit_by_service = calculate_mode_shares(
-    df=df_obs_linked,
-    mode_col='Linked_Mode_txt',
-    filter_conditions={'Ac_Mode_Model': 'Walk'},
-    mode_mapping={
-        'LCL': 'walk-local',
-        'COR': 'walk-core',
-        'EXP': 'walk-express',
-        'LRT': 'walk-lrt',
-        'CRT': 'walk-crt',
-        'BRT': 'walk-brt'
-    },
+# 3. Walk-to-Transit by Service Type (within walk-to-transit trips)
+print("\n" + "=" * 60)
+print("3. WALK-TO-TRANSIT BY SERVICE TYPE")
+print("=" * 60)
+
+walk_service_mapping = {
+    'LCL': 'walk-local',
+    'EXP': 'walk-express',
+    'LRT': 'walk-lrt',
+    'CRT': 'walk-crt',
+    'BRT': 'walk-brt'
+}
+
+df_walk_to_transit = calculate_categorical_shares(
+    df_obs_linked,
+    category_col='Linked_Mode_txt',
+    weight_col='LINKED_WEIGHT',
+    group_cols=['Veh_Cat3p', 'Purp5_text', 'PK_OK'],
+    filter_condition='Ac_Mode_Model == "Walk" & Linked_Mode_txt != "MT"',
+    category_mapping=walk_service_mapping,
     prefix='calib_share'
 )
 
-print("\nWalk-to-Transit by Service Type:")
-display(df_walk_transit_by_service)
+
+print("\nShape:", df_walk_to_transit.shape)
+print("\nFirst few rows:")
+print(df_walk_to_transit.head(10))
+print("\nVerification:")
+verify_shares(df_walk_to_transit)
 ```
 
 ##### Drive to Transit
 
 
 ```{python}
-df_drive_transit_by_service = calculate_mode_shares(
-    df=df_obs_linked,
-    mode_col='Linked_Mode_txt',
-    filter_conditions={'Ac_Mode_Model': 'Drive'},
-    mode_mapping={
-        'LCL': 'drive-local',
-        'COR': 'drive-core',
-        'EXP': 'drive-express',
-        'LRT': 'drive-lrt',
-        'CRT': 'drive-crt',
-        'BRT': 'drive-brt'
-    },
+# 4. Drive-to-Transit by Service Type (within drive-to-transit trips)
+print("\n" + "=" * 60)
+print("4. DRIVE-TO-TRANSIT BY SERVICE TYPE")
+print("=" * 60)
+
+drive_service_mapping = {
+    'LCL': 'drive-local',
+    'EXP': 'drive-express',
+    'LRT': 'drive-lrt',
+    'CRT': 'drive-crt',
+    'BRT': 'drive-brt'
+}
+
+df_drive_to_transit = calculate_categorical_shares(
+    df_obs_linked,
+    category_col='Linked_Mode_txt',
+    weight_col='LINKED_WEIGHT',
+    group_cols=['Veh_Cat3p', 'Purp5_text', 'PK_OK'],
+    filter_condition='Ac_Mode_Model == "Drive" & Linked_Mode_txt != "MT"',
+    category_mapping=drive_service_mapping,
     prefix='calib_share'
 )
 
-print("\nDrive-to-Transit by Service Type:")
-display(df_drive_transit_by_service)
-```
-
-```{python}
-# Concatenate all results
-df_all_transit_shares = pd.concat([
-    df_transit_by_service,
-    df_transit_by_access,
-    df_walk_transit_by_service,
-    df_drive_transit_by_service
-], axis=0)
-
-print("\nAll Transit Shares Combined:")
-display(df_all_transit_shares)
+print("\nShape:", df_drive_to_transit.shape)
+print("\nFirst few rows:")
+print(df_drive_to_transit.head(10))
+print("\nVerification:")
+verify_shares(df_drive_to_transit)
 ```
