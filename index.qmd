@@ -100,7 +100,8 @@ def calculate_categorical_shares(
     filter_condition=None,
     category_mapping=None,
     prefix='share',
-    exclude_daily_purposes=['HBW', 'HBO', 'NHB']  # Only HBC and HBSch get daily
+    purpose_by_period=['HBW', 'HBO', 'NHB'],  # Only HBC and HBSch get daily
+    purpose_daily=['HBC', 'HBSch']  # NEW: Purposes that only get daily (no peak/off-peak)
 ):
     """
     Calculate weighted shares of categories within groups, ensuring they sum to 1.
@@ -121,20 +122,21 @@ def calculate_categorical_shares(
         Optional mapping to rename/recode categories
     prefix : str
         Prefix for output column names
-    exclude_daily_purposes : list
-        Purposes that should NOT get daily aggregates (only peak/off-peak)
+    purpose_by_period : list
+        Purposes that should NOT get daily aggregates
+    purpose_daily : list
+        Purposes that ONLY get daily aggregates (no peak/off-peak breakdown)
 
     Returns:
     --------
     DataFrame with shares in wide format
     """
 
-    # Start with a copy
-    df_work = df.copy()
-
-    # Apply filter if provided
+    # Apply filter and copy in one step
     if filter_condition:
-        df_work = df_work.query(filter_condition)
+        df_work = df.query(filter_condition).copy()
+    else:
+        df_work = df.copy()
 
     # Apply category mapping if provided
     if category_mapping:
@@ -145,12 +147,22 @@ def calculate_categorical_shares(
     # Remove any NaN values in key columns
     df_work = df_work.dropna(subset=[category_col, weight_col] + group_cols)
 
+    # Convert Veh_Cat3p to string format for consistency
+    df_work['Veh_Cat3p'] = df_work['Veh_Cat3p'].astype(str)
+    # Map 3 to 3+ for display
+    # df_work['Veh_Cat3p'] = df_work['Veh_Cat3p'].replace('3', '3+')
+
     # Initialize results dictionary
     results = {}
 
-    # Calculate weighted shares for each group combination
+    # Calculate weighted shares for each group combination (peak/off-peak)
+    # BUT skip purpose_daily
     for veh in sorted(df_work['Veh_Cat3p'].unique()):
         for purpose in sorted(df_work['Purp5_text'].unique()):
+            # Skip peak/off-peak for daily-only purposes
+            if purpose in purpose_daily:
+                continue
+
             for peak in sorted(df_work['PK_OK'].unique()):
                 subset = df_work.query(
                     f"Veh_Cat3p == '{veh}' & Purp5_text == '{purpose}' & PK_OK == '{peak}'"
@@ -167,8 +179,12 @@ def calculate_categorical_shares(
                             results[var_name] = {}
                         results[var_name][(purpose, peak)] = weighted_count / total_weight
 
-    # Calculate "_all" aggregates (across all vehicle categories)
+    # Calculate "_all" aggregates for peak/off-peak (excluding daily-only purposes)
     for purpose in sorted(df_work['Purp5_text'].unique()):
+        # Skip peak/off-peak for daily-only purposes
+        if purpose in purpose_daily:
+            continue
+
         for peak in sorted(df_work['PK_OK'].unique()):
             subset = df_work.query(f"Purp5_text == '{purpose}' & PK_OK == '{peak}'")
 
@@ -182,9 +198,9 @@ def calculate_categorical_shares(
                         results[var_name] = {}
                     results[var_name][(purpose, peak)] = weighted_count / total_weight
 
-    # Calculate daily aggregates for HBC and HBSch only
+    # Calculate daily aggregates for specified purposes only
     daily_purposes = [p for p in df_work['Purp5_text'].unique()
-                     if p not in exclude_daily_purposes]
+                     if p not in purpose_by_period]
 
     for purpose in daily_purposes:
         subset = df_work.query(f"Purp5_text == '{purpose}'")
@@ -228,34 +244,63 @@ def calculate_categorical_shares(
 # Verify categorical shares sum to 1.0000
 def verify_shares(df_shares, tolerance=0.01):
     """
-    Verify that shares sum to approximately 1 within each group.
+    Verify that shares sum to approximately 1 within each vehicle category group.
+
+    Now that we have separate rows for each vehicle ownership category (0veh, 1veh, 2veh, 3+veh, all),
+    we need to verify that shares sum to 1 within each vehicle category separately.
     """
     print("=== Verifying Share Sums ===\n")
 
-    # Check sums for each column
+    # Extract vehicle categories from index
+    # Assuming format: calib_share_{category}_{veh_category}
+    vehicle_categories = df_shares.index.str.extract(r'_(\d\+?veh|all)$')[0].unique()
+
+    print(f"Vehicle categories found: {sorted(vehicle_categories)}\n")
+
     all_good = True
     issues = []
 
-    for col in df_shares.columns:
-        col_sum = df_shares[col].sum()
+    # Check each vehicle category separately
+    for veh_cat in sorted(vehicle_categories):
+        # Filter rows for this vehicle category
+        mask = df_shares.index.str.endswith(f'_{veh_cat}')
+        df_veh = df_shares[mask]
 
-        if abs(col_sum - 1.0) > tolerance:
-            all_good = False
-            issues.append((col, col_sum))
+        print(f"--- Checking {veh_cat} ({len(df_veh)} categories) ---")
 
+        # Check sums for each column within this vehicle category
+        veh_issues = []
+        for col in df_veh.columns:
+            col_sum = df_veh[col].sum()
+
+            if abs(col_sum - 1.0) > tolerance:
+                all_good = False
+                veh_issues.append((col, col_sum))
+
+        if not veh_issues:
+            print(f"  ✅ All shares sum to 1.0 for {veh_cat}")
+        else:
+            print(f"  ⚠️  {len(veh_issues)} columns don't sum to 1.0 for {veh_cat}:")
+            for col, sum_val in veh_issues[:5]:  # Show first 5
+                print(f"     {col}: {sum_val:.4f}")
+            if len(veh_issues) > 5:
+                print(f"     ... and {len(veh_issues) - 5} more")
+            issues.extend([(veh_cat, col, sum_val) for col, sum_val in veh_issues])
+        print()
+
+    print(f"{'='*60}")
     if all_good:
-        print("✅ All shares sum to 1.0 (within tolerance)")
+        print("✅ ALL VEHICLE CATEGORIES: Shares sum to 1.0 (within tolerance)")
     else:
-        print(f"⚠️  Warning: {len(issues)} columns don't sum to 1.0:\n")
-        for col, sum_val in issues[:10]:  # Show first 10
-            print(f"   {col}: {sum_val:.4f}")
-        if len(issues) > 10:
-            print(f"   ... and {len(issues) - 10} more")
+        print(f"⚠️  WARNING: {len(issues)} total column/vehicle combinations don't sum to 1.0")
 
     print(f"\nTotal columns: {len(df_shares.columns)}")
-    print(f"Columns with correct sums: {len(df_shares.columns) - len(issues)}")
+    print(f"Total vehicle categories: {len(vehicle_categories)}")
+    print(f"Total combinations: {len(df_shares.columns) * len(vehicle_categories)}")
 
-    return df_shares.sum(axis=0)
+    # Return sums by vehicle category
+    return {veh_cat: df_shares[df_shares.index.str.endswith(f'_{veh_cat}')].sum(axis=0)
+            for veh_cat in sorted(vehicle_categories)}
 ```
 
 ## Setup BigQuery
@@ -313,6 +358,15 @@ df_hts_linked = client.query(
 ).to_dataframe()
 
 df_hts_linked
+```
+
+```{python}
+# Load Household data from 2023 Household Travel Survey
+df_hts_hh = client.query(
+    "SELECT * FROM " + 'wfrc-modeling-data.prd_tdm_hts_2023.hh'
+).to_dataframe()
+
+df_hts_hh
 ```
 
 # Understanding Mode Hierarchy
@@ -407,6 +461,8 @@ flowchart LR
 ## On-Board Survey
 
 ```{python}
+#| eval: false
+
 df_obs_linked[[
     "Linked_Mode_txt", # Linked Mode: MT = MicroTransit (dont need), LCL = local bus, COR = Core Bus, EXP = Express Bus, LRT = Light Rail Transit (TRAX), CRT = Commuter Rail Transit (FrontRunner), BRT = Bus Rapid Transit (OVX, UVX)
     "Purp5_text", # Trip Purpose: HBW = Home-based Work, HBO = Home-based Other, HBC = Home-based College, NHB = Non-home based, HBSch = Home-based School
@@ -417,34 +473,217 @@ df_obs_linked[[
 ]]
 ```
 
+# Process HTS to get needed vars
+
+OBS has already been processed in OBS Prep repo. So, this section will only Process HTS data to get needed columns.
+
+## Purpose (5-category)
+
+```{python}
+purpose_mapping = {
+    'HBOth' : 'HBO',
+    'NHBNW' : 'NHB',
+    'HBW'   : 'HBW',
+    'NHBW'  : 'NHB',
+    'HBShp' : 'HBO',
+    'HBSch' : 'HBSch',
+    'HBC'   : 'HBC'
+}
+
+df_hts_linked['Purp5_text'] = df_hts_linked['PURP7_t'].map(purpose_mapping)
+```
+
+## Vehicle Ownership
+
+```{python}
+# Join household data to linked trips data
+df_hts_linked = df_hts_linked.merge(
+    df_hts_hh[['hh_id', 'num_vehicles_4cat']],  # Select only needed columns
+    on='hh_id',
+    how='left'  # Keep all trips, even if household data is missing
+)
+
+# Rename the vehicle ownership column to match the OBS data
+df_hts_linked = df_hts_linked.rename(columns={'num_vehicles_4cat': 'Veh_Cat3p'})
+```
+
+## Peak - Offpeak
+
+```{python}
+df_hts_linked['PK_OK'] = np.where(
+    df_hts_linked["depart_per"].isin(["AM", "PM"]),
+    "PK",
+    "OK"
+)
+```
+
 # Trips: Motorized vs Non-motorized
 
+```{python}
+# 1. All Trips: Motorized vs Non-motorized
+print("\n" + "=" * 60)
+print("1. ALL TRIPS: MOTORIZED VS NON-MOTORIZED")
+print("=" * 60)
 
+all_trips_mapping = {
+    'Drive-Alone'   : 'motor',
+    'Shared-Ride 2' : 'motor',
+    'Shared-Ride 3+': 'motor',
+    'Walk-Transit'  : 'motor',
+    'Drive-Transit' : 'motor',
+    'Walk'          : 'nonmotor',
+    'Bike'          : 'nonmotor'
+}
+
+df_alltrips_cat = calculate_categorical_shares(
+    df_hts_linked,
+    category_col='linked_trip_mode_t',
+    weight_col='linked_trip_weight',
+    group_cols=['Veh_Cat3p', 'Purp5_text', 'PK_OK'],
+    filter_condition='linked_trip_mode_t in ["Drive-Alone", "Shared-Ride 2", "Shared-Ride 3+", "Walk-Transit", "Drive-Transit", "Walk", "Bike"]',
+    category_mapping=all_trips_mapping,
+    prefix='calib_share'
+)
+
+print("\nShape:", df_alltrips_cat.shape)
+print("\nFirst few rows:")
+print(df_alltrips_cat.head(10))
+print("\nVerification:")
+verify_shares(df_alltrips_cat)
+```
 
 ## Non-motorized Trips: Walk vs Bike
 
+```{python}
+# 2. NON-MOTORIZED TRIPS
+print("\n" + "=" * 60)
+print("2. NON-MOTORIZED TRIPS")
+print("=" * 60)
 
+non_motorized_mapping = {
+    'Walk' : 'walk',
+    'Bike' : 'bike'
+}
+
+df_nonmotorized_cat = calculate_categorical_shares(
+    df_hts_linked,
+    category_col='linked_trip_mode_t',
+    weight_col='linked_trip_weight',
+    group_cols=['Veh_Cat3p', 'Purp5_text', 'PK_OK'],
+    filter_condition='linked_trip_mode_t in ["Walk", "Bike"]',
+    category_mapping=non_motorized_mapping,
+    prefix='calib_share'
+)
+
+print("\nShape:", df_nonmotorized_cat.shape)
+print("\nFirst few rows:")
+print(df_nonmotorized_cat.head(10))
+print("\nVerification:")
+verify_shares(df_nonmotorized_cat)
+```
 
 ## Motorized Trips: Auto vs Transit
 
+```{python}
+# 3. Motorized Trips: Auto vs Transit
+print("\n" + "=" * 60)
+print("3. MOTORIZED TRIPS: AUTO VS TRANSIT")
+print("=" * 60)
 
+motorized_mapping = {
+    'Drive-Alone'   : 'auto',
+    'Shared-Ride 2' : 'auto',
+    'Shared-Ride 3+': 'auto',
+    'Walk-Transit'  : 'transit',
+    'Drive-Transit' : 'transit'
+}
+
+df_motorized_cat = calculate_categorical_shares(
+    df_hts_linked,
+    category_col='linked_trip_mode_t',
+    weight_col='linked_trip_weight',
+    group_cols=['Veh_Cat3p', 'Purp5_text', 'PK_OK'],
+    filter_condition='linked_trip_mode_t in ["Drive-Alone", "Shared-Ride 2", "Shared-Ride 3+", "Walk-Transit", "Drive-Transit"]',
+    category_mapping=motorized_mapping,
+    prefix='calib_share'
+)
+
+print("\nShape:", df_motorized_cat.shape)
+print("\nFirst few rows:")
+print(df_motorized_cat.head(10))
+print("\nVerification:")
+verify_shares(df_motorized_cat)
+```
 
 ### Auto Trips: Drive Alone vs Shared Rides
 
+```{python}
+# 4. Auto Trips: Drive Alone vs Shared Rides
+print("\n" + "=" * 60)
+print("4. AUTO TRIPS: DRIVE ALONE VS SHARED RIDES")
+print("=" * 60)
 
+auto_ride_mapping = {
+    'Drive-Alone'   : 'alone',
+    'Shared-Ride 2' : 'shared',
+    'Shared-Ride 3+': 'shared'
+}
+
+df_auto_riders = calculate_categorical_shares(
+    df_hts_linked,
+    category_col='linked_trip_mode_t',
+    weight_col='linked_trip_weight',
+    group_cols=['Veh_Cat3p', 'Purp5_text', 'PK_OK'],
+    filter_condition='linked_trip_mode_t in ["Drive-Alone", "Shared-Ride 2", "Shared-Ride 3+"]',
+    category_mapping=auto_ride_mapping,
+    prefix='calib_share'
+)
+
+print("\nShape:", df_auto_riders.shape)
+print("\nFirst few rows:")
+print(df_auto_riders.head(10))
+print("\nVerification:")
+verify_shares(df_auto_riders)
+```
 
 #### Shared Rides: 2 People vs 3+ People
 
+```{python}
+# 5. Shared Ride by the Number of People
+print("\n" + "=" * 60)
+print("5. SHARED RIDER BY NUMBER OF PEOPLE")
+print("=" * 60)
 
+shared_ride_mapping = {
+    'Shared-Ride 2' : 'sr2',
+    'Shared-Ride 3+': 'sr3'
+}
+
+df_shared_by_person = calculate_categorical_shares(
+    df_hts_linked,
+    category_col='linked_trip_mode_t',
+    weight_col='linked_trip_weight',
+    group_cols=['Veh_Cat3p', 'Purp5_text', 'PK_OK'],
+    filter_condition='linked_trip_mode_t in ["Shared-Ride 2", "Shared-Ride 3+"]',
+    category_mapping=shared_ride_mapping,
+    prefix='calib_share'
+)
+
+print("\nShape:", df_shared_by_person.shape)
+print("\nFirst few rows:")
+print(df_shared_by_person.head(10))
+print("\nVerification:")
+verify_shares(df_shared_by_person)
+```
 
 ### Transit Trips: By Service and By Access Mode
 
 #### By Service Type
 
 ```{python}
-# 1. Transit by Service Type (within linked transit trips)
+# 6. Transit by Service Type (within linked transit trips)
 print("\n" + "=" * 60)
-print("1. TRANSIT BY SERVICE TYPE")
+print("6. TRANSIT BY SERVICE TYPE")
 print("=" * 60)
 
 service_mapping = {
@@ -476,9 +715,9 @@ verify_shares(df_transit_by_service)
 #### By Access Mode: Walk vs Drive to Transit
 
 ```{python}
-# 2. Transit by Access Type (Walk vs Drive) (within linked transit trips)
+# 7. Transit by Access Type (Walk vs Drive) (within linked transit trips)
 print("\n" + "=" * 60)
-print("2. TRANSIT BY ACCESS TYPE")
+print("7. TRANSIT BY ACCESS TYPE")
 print("=" * 60)
 
 access_mapping = {
@@ -488,7 +727,7 @@ access_mapping = {
 
 df_transit_by_access = calculate_categorical_shares(
     df_obs_linked,
-    category_col='Ac_Mode_Model',
+    category_col='Ac_Mode2_Model',
     weight_col='LINKED_WEIGHT',
     group_cols=['Veh_Cat3p', 'Purp5_text', 'PK_OK'],
     filter_condition='Linked_Mode_txt != "MT"',
@@ -506,17 +745,17 @@ verify_shares(df_transit_by_access)
 ##### Walk to Transit
 
 ```{python}
-# 3. Walk-to-Transit by Service Type (within walk-to-transit trips)
+# 8. Walk-to-Transit by Service Type (within walk-to-transit trips)
 print("\n" + "=" * 60)
-print("3. WALK-TO-TRANSIT BY SERVICE TYPE")
+print("8. WALK-TO-TRANSIT BY SERVICE TYPE")
 print("=" * 60)
 
 walk_service_mapping = {
-    'LCL': 'walk-local',
-    'EXP': 'walk-express',
-    'LRT': 'walk-lrt',
-    'CRT': 'walk-crt',
-    'BRT': 'walk-brt'
+    'LCL': 'wlocal',
+    'EXP': 'wexpress',
+    'LRT': 'wlrt',
+    'CRT': 'wcrt',
+    'BRT': 'wbrt'
 }
 
 df_walk_to_transit = calculate_categorical_shares(
@@ -524,7 +763,7 @@ df_walk_to_transit = calculate_categorical_shares(
     category_col='Linked_Mode_txt',
     weight_col='LINKED_WEIGHT',
     group_cols=['Veh_Cat3p', 'Purp5_text', 'PK_OK'],
-    filter_condition='Ac_Mode_Model == "Walk" & Linked_Mode_txt != "MT"',
+    filter_condition='Ac_Mode2_Model == "Walk" & Linked_Mode_txt != "MT"',
     category_mapping=walk_service_mapping,
     prefix='calib_share'
 )
@@ -541,17 +780,17 @@ verify_shares(df_walk_to_transit)
 
 
 ```{python}
-# 4. Drive-to-Transit by Service Type (within drive-to-transit trips)
+# 9. Drive-to-Transit by Service Type (within drive-to-transit trips)
 print("\n" + "=" * 60)
-print("4. DRIVE-TO-TRANSIT BY SERVICE TYPE")
+print("9. DRIVE-TO-TRANSIT BY SERVICE TYPE")
 print("=" * 60)
 
 drive_service_mapping = {
-    'LCL': 'drive-local',
-    'EXP': 'drive-express',
-    'LRT': 'drive-lrt',
-    'CRT': 'drive-crt',
-    'BRT': 'drive-brt'
+    'LCL': 'dlocal',
+    'EXP': 'dexpress',
+    'LRT': 'dlrt',
+    'CRT': 'dcrt',
+    'BRT': 'dbrt'
 }
 
 df_drive_to_transit = calculate_categorical_shares(
@@ -559,7 +798,7 @@ df_drive_to_transit = calculate_categorical_shares(
     category_col='Linked_Mode_txt',
     weight_col='LINKED_WEIGHT',
     group_cols=['Veh_Cat3p', 'Purp5_text', 'PK_OK'],
-    filter_condition='Ac_Mode_Model == "Drive" & Linked_Mode_txt != "MT"',
+    filter_condition='Ac_Mode2_Model == "Drive" & Linked_Mode_txt != "MT"',
     category_mapping=drive_service_mapping,
     prefix='calib_share'
 )
