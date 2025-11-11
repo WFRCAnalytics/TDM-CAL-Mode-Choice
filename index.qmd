@@ -354,7 +354,7 @@ df_obs_linked
 ```{python}
 # Load Linked Trips data from 2023 Household Travel Survey
 df_hts_linked = client.query(
-    "SELECT hh_id, PURP7_t, depart_per, linked_trip_mode_t, linked_trip_weight FROM " + 'wfrc-modeling-data.prd_tdm_hts_2023.trip_linked'
+    "SELECT hh_id, PURP7_t, depart_per, model_trip_mode_WFv10, trip_weight FROM " + 'wfrc-modeling-data.prd_tdm_hts_2023.trip_linked'
 ).to_dataframe()
 
 df_hts_linked
@@ -526,21 +526,21 @@ print("1. ALL TRIPS: MOTORIZED VS NON-MOTORIZED")
 print("=" * 60)
 
 all_trips_mapping = {
-    'Drive-Alone'   : 'motor',
-    'Shared-Ride 2' : 'motor',
-    'Shared-Ride 3+': 'motor',
-    'Walk-Transit'  : 'motor',
-    'Drive-Transit' : 'motor',
-    'Walk'          : 'nonmotor',
-    'Bike'          : 'nonmotor'
+    'auto-sov'         : 'motor',
+    'auto-occ2'        : 'motor',
+    'auto-occ3p'       : 'motor',
+    'walk-to-transit'  : 'motor',
+    'drive-to-transit' : 'motor',
+    'walk'             : 'nonmotor',
+    'bike'             : 'nonmotor'
 }
 
 df_alltrips_cat = calculate_categorical_shares(
     df_hts_linked,
-    category_col='linked_trip_mode_t',
-    weight_col='linked_trip_weight',
+    category_col='model_trip_mode_WFv10',
+    weight_col='trip_weight',
     group_cols=['Veh_Cat3p', 'Purp5_text', 'PK_OK'],
-    filter_condition='linked_trip_mode_t in ["Drive-Alone", "Shared-Ride 2", "Shared-Ride 3+", "Walk-Transit", "Drive-Transit", "Walk", "Bike"]',
+    filter_condition='model_trip_mode_WFv10 in ["auto-sov", "auto-occ2", "auto-occ3p", "walk-to-transit", "drive-to-transit", "walk", "bike"]',
     category_mapping=all_trips_mapping,
     prefix='calib_share'
 )
@@ -560,18 +560,18 @@ print("\n" + "=" * 60)
 print("2. NON-MOTORIZED TRIPS")
 print("=" * 60)
 
-non_motorized_mapping = {
-    'Walk' : 'walk',
-    'Bike' : 'bike'
-}
+# non_motorized_mapping = {
+#     'walk' : 'walk',
+#     'bike' : 'bike'
+# }
 
 df_nonmotorized_cat = calculate_categorical_shares(
     df_hts_linked,
-    category_col='linked_trip_mode_t',
-    weight_col='linked_trip_weight',
+    category_col='model_trip_mode_WFv10',
+    weight_col='trip_weight',
     group_cols=['Veh_Cat3p', 'Purp5_text', 'PK_OK'],
-    filter_condition='linked_trip_mode_t in ["Walk", "Bike"]',
-    category_mapping=non_motorized_mapping,
+    filter_condition='model_trip_mode_WFv10 in ["walk", "bike"]',
+    category_mapping=None,
     prefix='calib_share'
 )
 
@@ -591,19 +591,19 @@ print("3. MOTORIZED TRIPS: AUTO VS TRANSIT")
 print("=" * 60)
 
 motorized_mapping = {
-    'Drive-Alone'   : 'auto',
-    'Shared-Ride 2' : 'auto',
-    'Shared-Ride 3+': 'auto',
-    'Walk-Transit'  : 'transit',
-    'Drive-Transit' : 'transit'
+    'auto-sov'         : 'auto',
+    'auto_occ2'        : 'auto',
+    'auto_occ3p'       : 'auto',
+    'walk-to-transit'  : 'transit',
+    'drive-to-transit' : 'transit'
 }
 
 df_motorized_cat = calculate_categorical_shares(
     df_hts_linked,
-    category_col='linked_trip_mode_t',
-    weight_col='linked_trip_weight',
+    category_col='model_trip_mode_WFv10',
+    weight_col='trip_weight',
     group_cols=['Veh_Cat3p', 'Purp5_text', 'PK_OK'],
-    filter_condition='linked_trip_mode_t in ["Drive-Alone", "Shared-Ride 2", "Shared-Ride 3+", "Walk-Transit", "Drive-Transit"]',
+    filter_condition='model_trip_mode_WFv10 in ["auto-sov", "auto_occ2", "auto_occ3p", "walk-to-transit", "drive-to-transit"]',
     category_mapping=motorized_mapping,
     prefix='calib_share'
 )
@@ -624,17 +624,17 @@ print("4. AUTO TRIPS: DRIVE ALONE VS SHARED RIDES")
 print("=" * 60)
 
 auto_ride_mapping = {
-    'Drive-Alone'   : 'alone',
-    'Shared-Ride 2' : 'shared',
-    'Shared-Ride 3+': 'shared'
+    'auto-sov'   : 'alone',
+    'auto_occ2'  : 'shared',
+    'auto_occ3p' : 'shared'
 }
 
 df_auto_riders = calculate_categorical_shares(
     df_hts_linked,
-    category_col='linked_trip_mode_t',
-    weight_col='linked_trip_weight',
+    category_col='model_trip_mode_WFv10',
+    weight_col='trip_weight',
     group_cols=['Veh_Cat3p', 'Purp5_text', 'PK_OK'],
-    filter_condition='linked_trip_mode_t in ["Drive-Alone", "Shared-Ride 2", "Shared-Ride 3+"]',
+    filter_condition='model_trip_mode_WFv10 in ["auto-sov", "auto_occ2", "auto_occ3p"]',
     category_mapping=auto_ride_mapping,
     prefix='calib_share'
 )
@@ -655,16 +655,16 @@ print("5. SHARED RIDER BY NUMBER OF PEOPLE")
 print("=" * 60)
 
 shared_ride_mapping = {
-    'Shared-Ride 2' : 'sr2',
-    'Shared-Ride 3+': 'sr3'
+    'auto_occ2' : 'sr2',
+    'auto_occ3p': 'sr3'
 }
 
 df_shared_by_person = calculate_categorical_shares(
     df_hts_linked,
-    category_col='linked_trip_mode_t',
-    weight_col='linked_trip_weight',
+    category_col='model_trip_mode_WFv10',
+    weight_col='trip_weight',
     group_cols=['Veh_Cat3p', 'Purp5_text', 'PK_OK'],
-    filter_condition='linked_trip_mode_t in ["Shared-Ride 2", "Shared-Ride 3+"]',
+    filter_condition='model_trip_mode_WFv10 in ["auto_occ2", "auto_occ3p"]',
     category_mapping=shared_ride_mapping,
     prefix='calib_share'
 )
@@ -812,6 +812,403 @@ verify_shares(df_drive_to_transit)
 
 # Export Calibration Target Files
 
+```{python}
+#| eval: false
+
+import pandas as pd
+import numpy as np
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+
+# Function to build hierarchical data for treemap
+def build_treemap_data(
+    df_alltrips_cat,
+    df_nonmotorized_cat,
+    df_motorized_cat,
+    df_auto_riders,
+    df_shared_by_person,
+    df_transit_by_service,
+    df_transit_by_access,
+    df_walk_to_transit,
+    df_drive_to_transit,
+    purpose,
+    period,
+    veh_cat
+):
+    """
+    Build hierarchical data structure for treemap from calibration dataframes.
+
+    Returns: labels, parents, values, colors, hover_text
+    """
+
+    labels = []
+    parents = []
+    values = []
+    colors = []
+    hover_text = []
+
+    # Helper function to get value from dataframe
+    def get_value(df, pattern, purpose, period, veh_cat='all'):
+        """Extract value from dataframe matching pattern and categories"""
+        try:
+            # Build the full variable name
+            if veh_cat == 'all':
+                var_name = f"calib_share_{pattern}_all"
+            else:
+                var_name = f"calib_share_{pattern}_{veh_cat}"
+
+            # Check if column exists
+            if (purpose, period) not in df.columns:
+                return 0.0
+
+            # Check if index exists
+            if var_name in df.index:
+                return df.loc[var_name, (purpose, period)]
+            else:
+                return 0.0
+        except:
+            return 0.0
+
+    # Color scheme
+    color_map = {
+        'Total': '#808080',
+        'Motorized': '#FFD700',
+        'Non-motorized': '#90EE90',
+        'Walk': '#228B22',
+        'Bike': '#32CD32',
+        'Auto': '#DC143C',
+        'Transit': '#4169E1',
+        'Drive Alone': '#8B0000',
+        'Shared Ride': '#CD5C5C',
+        'SR2': '#F08080',
+        'SR3': '#FFA07A',
+        'Local Bus': '#1E90FF',
+        'Core Bus': '#00BFFF',
+        'Express Bus': '#87CEEB',
+        'LRT': '#4682B4',
+        'CRT': '#5F9EA0',
+        'BRT': '#6495ED',
+        'Walk-to-Transit': '#00CED1',
+        'Drive-to-Transit': '#20B2AA',
+    }
+
+    # Root: Total Trips
+    labels.append('Total Trips')
+    parents.append('')
+    values.append(1.0)
+    colors.append(color_map['Total'])
+    hover_text.append(f"<b>Total Trips</b><br>100.0%<br>{purpose} - {period}")
+
+    # Level 1: Motorized vs Non-motorized
+    nonmotor_share = get_value(df_alltrips_cat, 'nonmotor', purpose, period, veh_cat)
+    motor_share = 1.0 - nonmotor_share
+
+    labels.append('Motorized')
+    parents.append('Total Trips')
+    values.append(motor_share)
+    colors.append(color_map['Motorized'])
+    hover_text.append(f"<b>Motorized</b><br>{motor_share*100:.2f}%<br>of Total Trips")
+
+    labels.append('Non-motorized')
+    parents.append('Total Trips')
+    values.append(nonmotor_share)
+    colors.append(color_map['Non-motorized'])
+    hover_text.append(f"<b>Non-motorized</b><br>{nonmotor_share*100:.2f}%<br>of Total Trips")
+
+    # Level 2a: Non-motorized → Walk & Bike
+    walk_share = get_value(df_nonmotorized_cat, 'walk', purpose, period, veh_cat)
+    bike_share = get_value(df_nonmotorized_cat, 'bike', purpose, period, veh_cat)
+
+    labels.append('Walk')
+    parents.append('Non-motorized')
+    values.append(nonmotor_share * walk_share)
+    colors.append(color_map['Walk'])
+    hover_text.append(f"<b>Walk</b><br>{walk_share*100:.2f}% of Non-motorized<br>{nonmotor_share*walk_share*100:.2f}% of Total")
+
+    labels.append('Bike')
+    parents.append('Non-motorized')
+    values.append(nonmotor_share * bike_share)
+    colors.append(color_map['Bike'])
+    hover_text.append(f"<b>Bike</b><br>{bike_share*100:.2f}% of Non-motorized<br>{nonmotor_share*bike_share*100:.2f}% of Total")
+
+    # Level 2b: Motorized → Auto & Transit
+    auto_share = get_value(df_motorized_cat, 'auto', purpose, period, veh_cat)
+    transit_share = get_value(df_motorized_cat, 'transit', purpose, period, veh_cat)
+
+    labels.append('Auto')
+    parents.append('Motorized')
+    values.append(motor_share * auto_share)
+    colors.append(color_map['Auto'])
+    hover_text.append(f"<b>Auto</b><br>{auto_share*100:.2f}% of Motorized<br>{motor_share*auto_share*100:.2f}% of Total")
+
+    labels.append('Transit')
+    parents.append('Motorized')
+    values.append(motor_share * transit_share)
+    colors.append(color_map['Transit'])
+    hover_text.append(f"<b>Transit</b><br>{transit_share*100:.2f}% of Motorized<br>{motor_share*transit_share*100:.2f}% of Total")
+
+    # Level 3a: Auto → Drive Alone & Shared Ride
+    alone_share = get_value(df_auto_riders, 'alone', purpose, period, veh_cat)
+    shared_share = get_value(df_auto_riders, 'shared', purpose, period, veh_cat)
+    auto_absolute = motor_share * auto_share
+
+    labels.append('Drive Alone')
+    parents.append('Auto')
+    values.append(auto_absolute * alone_share)
+    colors.append(color_map['Drive Alone'])
+    hover_text.append(f"<b>Drive Alone</b><br>{alone_share*100:.2f}% of Auto<br>{auto_absolute*alone_share*100:.2f}% of Total")
+
+    labels.append('Shared Ride')
+    parents.append('Auto')
+    values.append(auto_absolute * shared_share)
+    colors.append(color_map['Shared Ride'])
+    hover_text.append(f"<b>Shared Ride</b><br>{shared_share*100:.2f}% of Auto<br>{auto_absolute*shared_share*100:.2f}% of Total")
+
+    # Level 4: Shared Ride → SR2 & SR3
+    sr2_share = get_value(df_shared_by_person, 'sr2', purpose, period, veh_cat)
+    sr3_share = get_value(df_shared_by_person, 'sr3', purpose, period, veh_cat)
+    shared_absolute = auto_absolute * shared_share
+
+    labels.append('SR2')
+    parents.append('Shared Ride')
+    values.append(shared_absolute * sr2_share)
+    colors.append(color_map['SR2'])
+    hover_text.append(f"<b>SR2 (2 people)</b><br>{sr2_share*100:.2f}% of Shared Ride<br>{shared_absolute*sr2_share*100:.2f}% of Total")
+
+    labels.append('SR3')
+    parents.append('Shared Ride')
+    values.append(shared_absolute * sr3_share)
+    colors.append(color_map['SR3'])
+    hover_text.append(f"<b>SR3 (3+ people)</b><br>{sr3_share*100:.2f}% of Shared Ride<br>{shared_absolute*sr3_share*100:.2f}% of Total")
+
+    # Level 3b: Transit → By Service Type
+    transit_absolute = motor_share * transit_share
+
+    service_types = ['local', 'core', 'brt', 'lrt', 'express', 'crt']
+    service_names = ['Local Bus', 'Core Bus', 'BRT', 'LRT', 'Express Bus', 'CRT']
+
+    for service, name in zip(service_types, service_names):
+        service_share = get_value(df_transit_by_service, service, purpose, period, veh_cat)
+        if service_share > 0:
+            labels.append(name)
+            parents.append('Transit')
+            values.append(transit_absolute * service_share)
+            colors.append(color_map.get(name, '#4169E1'))
+            hover_text.append(f"<b>{name}</b><br>{service_share*100:.2f}% of Transit<br>{transit_absolute*service_share*100:.2f}% of Total")
+
+    # Also add Transit by Access Mode as separate branches
+    walkacc_share = get_value(df_transit_by_access, 'walkacc', purpose, period, veh_cat)
+    driveacc_share = get_value(df_transit_by_access, 'driveacc', purpose, period, veh_cat)
+
+    if walkacc_share > 0:
+        labels.append('Walk-to-Transit')
+        parents.append('Transit')
+        values.append(transit_absolute * walkacc_share)
+        colors.append(color_map['Walk-to-Transit'])
+        hover_text.append(f"<b>Walk-to-Transit</b><br>{walkacc_share*100:.2f}% of Transit<br>{transit_absolute*walkacc_share*100:.2f}% of Total")
+
+        # Walk-to-Transit by service
+        walk_services = [('wlocal', 'W→Local'), ('wcore', 'W→Core'), ('wbrt', 'W→BRT'),
+                        ('wlrt', 'W→LRT'), ('wexpress', 'W→Express'), ('wcrt', 'W→CRT')]
+        walkacc_absolute = transit_absolute * walkacc_share
+
+        for service, name in walk_services:
+            service_share = get_value(df_walk_to_transit, service, purpose, period, veh_cat)
+            if service_share > 0:
+                labels.append(name)
+                parents.append('Walk-to-Transit')
+                values.append(walkacc_absolute * service_share)
+                colors.append('#48D1CC')
+                hover_text.append(f"<b>{name}</b><br>{service_share*100:.2f}% of Walk-to-Transit<br>{walkacc_absolute*service_share*100:.2f}% of Total")
+
+    if driveacc_share > 0:
+        labels.append('Drive-to-Transit')
+        parents.append('Transit')
+        values.append(transit_absolute * driveacc_share)
+        colors.append(color_map['Drive-to-Transit'])
+        hover_text.append(f"<b>Drive-to-Transit</b><br>{driveacc_share*100:.2f}% of Transit<br>{transit_absolute*driveacc_share*100:.2f}% of Total")
+
+        # Drive-to-Transit by service
+        drive_services = [('dlocal', 'D→Local'), ('dcore', 'D→Core'), ('dbrt', 'D→BRT'),
+                         ('dlrt', 'D→LRT'), ('dexpress', 'D→Express'), ('dcrt', 'D→CRT')]
+        driveacc_absolute = transit_absolute * driveacc_share
+
+        for service, name in drive_services:
+            service_share = get_value(df_drive_to_transit, service, purpose, period, veh_cat)
+            if service_share > 0:
+                labels.append(name)
+                parents.append('Drive-to-Transit')
+                values.append(driveacc_absolute * service_share)
+                colors.append('#3CB371')
+                hover_text.append(f"<b>{name}</b><br>{service_share*100:.2f}% of Drive-to-Transit<br>{driveacc_absolute*service_share*100:.2f}% of Total")
+
+    return labels, parents, values, colors, hover_text
+
+
+# Create the interactive figure with dropdowns
+def create_interactive_treemap(
+    df_alltrips_cat,
+    df_nonmotorized_cat,
+    df_motorized_cat,
+    df_auto_riders,
+    df_shared_by_person,
+    df_transit_by_service,
+    df_transit_by_access,
+    df_walk_to_transit,
+    df_drive_to_transit
+):
+    """
+    Create interactive treemap with dropdown menus for purpose, period, and vehicle category.
+    """
+
+    # Extract available purposes and periods from the dataframes
+    purposes = sorted(set([col[0] for col in df_alltrips_cat.columns]))
+    periods = sorted(set([col[1] for col in df_alltrips_cat.columns]))
+
+    # Extract vehicle categories from index
+    veh_categories = ['all', '0veh', '1veh', '2veh', '3veh']
+
+    # Initialize with first combination
+    initial_purpose = purposes[0]
+    initial_period = periods[0]
+    initial_veh = 'all'
+
+    labels, parents, values, colors, hover_text = build_treemap_data(
+        df_alltrips_cat, df_nonmotorized_cat, df_motorized_cat,
+        df_auto_riders, df_shared_by_person, df_transit_by_service,
+        df_transit_by_access, df_walk_to_transit, df_drive_to_transit,
+        initial_purpose, initial_period, initial_veh
+    )
+
+    # Create figure
+    fig = go.Figure(go.Treemap(
+        labels=labels,
+        parents=parents,
+        values=values,
+        marker=dict(
+            colors=colors,
+            line=dict(width=2, color='white')
+        ),
+        text=hover_text,
+        hovertemplate='%{text}<extra></extra>',
+        textposition='middle center',
+        pathbar=dict(visible=True)
+    ))
+
+    # Create dropdown menus
+    buttons_purpose = []
+    for purpose in purposes:
+        buttons_purpose.append({
+            'label': purpose,
+            'method': 'skip',  # We'll handle updates via JavaScript callback
+            'args': [{'purpose': purpose}]
+        })
+
+    buttons_period = []
+    for period in periods:
+        buttons_period.append({
+            'label': period,
+            'method': 'skip',
+            'args': [{'period': period}]
+        })
+
+    buttons_veh = []
+    veh_labels = {
+        'all': 'All Vehicles',
+        '0veh': '0 Vehicles',
+        '1veh': '1 Vehicle',
+        '2veh': '2 Vehicles',
+        '3veh': '3+ Vehicles'
+    }
+    for veh in veh_categories:
+        buttons_veh.append({
+            'label': veh_labels[veh],
+            'method': 'skip',
+            'args': [{'veh_cat': veh}]
+        })
+
+    fig.update_layout(
+        title={
+            'text': f'Mode Choice Calibration Parameters<br><sub>{initial_purpose} - {initial_period} - {veh_labels[initial_veh]}</sub>',
+            'x': 0.5,
+            'xanchor': 'center',
+            'font': {'size': 20}
+        },
+        width=1400,
+        height=800,
+        font=dict(size=11),
+        updatemenus=[
+            # Purpose dropdown
+            dict(
+                buttons=[
+                    dict(label=p, method='restyle', args=[{'visible': True}])
+                    for p in purposes
+                ],
+                direction='down',
+                showactive=True,
+                x=0.17,
+                xanchor='left',
+                y=1.15,
+                yanchor='top',
+                bgcolor='white',
+                bordercolor='gray',
+                borderwidth=1
+            ),
+            # Period dropdown
+            dict(
+                buttons=[
+                    dict(label=p, method='restyle', args=[{'visible': True}])
+                    for p in periods
+                ],
+                direction='down',
+                showactive=True,
+                x=0.5,
+                xanchor='center',
+                y=1.15,
+                yanchor='top',
+                bgcolor='white',
+                bordercolor='gray',
+                borderwidth=1
+            ),
+            # Vehicle category dropdown
+            dict(
+                buttons=[
+                    dict(label=veh_labels[v], method='restyle', args=[{'visible': True}])
+                    for v in veh_categories
+                ],
+                direction='down',
+                showactive=True,
+                x=0.83,
+                xanchor='right',
+                y=1.15,
+                yanchor='top',
+                bgcolor='white',
+                bordercolor='gray',
+                borderwidth=1
+            )
+        ],
+        annotations=[
+            dict(text='<b>Purpose:</b>', x=0.02, y=1.13, xref='paper', yref='paper',
+                 showarrow=False, font=dict(size=12), xanchor='left'),
+            dict(text='<b>Period:</b>', x=0.38, y=1.13, xref='paper', yref='paper',
+                 showarrow=False, font=dict(size=12), xanchor='left'),
+            dict(text='<b>Vehicle Ownership:</b>', x=0.62, y=1.13, xref='paper', yref='paper',
+                 showarrow=False, font=dict(size=12), xanchor='left')
+        ]
+    )
+
+    return fig
+
+
+# Note: To use this code, call create_interactive_treemap with your dataframes:
+fig = create_interactive_treemap(
+    df_alltrips_cat, df_nonmotorized_cat, df_motorized_cat,
+    df_auto_riders, df_shared_by_person, df_transit_by_service,
+    df_transit_by_access, df_walk_to_transit, df_drive_to_transit
+)
+fig.show()
+```
+
 ## Output Folder
 
 ```{python}
@@ -908,6 +1305,10 @@ def export_calib_file(purpose, period, include_veh_categories=True):
     with open(filepath, 'w') as f:
         # Write header
         f.write(f";Calibration target values - {purpose} {display_period}\t\t\n")
+        f.write("\t\t\n")
+
+        # Write disclaimer
+        f.write(f";Note: Not all of the variables listed below are used directly in the Mode Choice model. Some are included solely for verification and cross-checking purposes.\t\t\n")
         f.write("\t\t\n")
 
         # =====================================================================
@@ -1102,9 +1503,9 @@ def export_calib_file(purpose, period, include_veh_categories=True):
 export_config = {
     'HBW':   {'periods': ['PK', 'OK'], 'include_veh': True},
     'HBO':   {'periods': ['PK', 'OK'], 'include_veh': True},
-    'NHB':   {'periods': ['PK', 'OK'], 'include_veh': False},
-    'HBC':   {'periods': ['Daily'],    'include_veh': False},
-    'HBSch': {'periods': ['Daily'],    'include_veh': False}
+    'NHB':   {'periods': ['PK', 'OK'], 'include_veh': True}, # False
+    'HBC':   {'periods': ['Daily'],    'include_veh': True}, # False
+    'HBSch': {'periods': ['Daily'],    'include_veh': True}  # False
 }
 
 for purpose, config in export_config.items():

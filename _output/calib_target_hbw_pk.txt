@@ -1,76 +1,71 @@
 ;Calibration target values - HBW Pk		
 		
+;Note: Not all of the variables listed below are used directly in the Mode Choice model. Some are included solely for verification and cross-checking purposes.		
+		
 ;relative within total trips		
   ;nonmotorized shares 		
-  calib_share_nonmotor_0veh     	=	0.3876
-  calib_share_nonmotor_1veh     	=	0.0821
-  calib_share_nonmotor_2veh     	=	0.0436
-  calib_share_nonmotor_3veh     	=	0.0208
-  calib_share_nonmotor_all      	=	0.0537
+  calib_share_nonmotor_0veh     	=	0.6040
+  calib_share_nonmotor_1veh     	=	0.5029
+  calib_share_nonmotor_2veh     	=	0.6212
+  calib_share_nonmotor_3veh     	=	0.5625
+  calib_share_nonmotor_all      	=	0.5709
 		
 		
 ;relative within nonmotorized		
   ;walk shares 		
-  calib_share_walk_0veh         	=	0.7531
-  calib_share_walk_1veh         	=	0.6230
-  calib_share_walk_2veh         	=	0.4240
-  calib_share_walk_3veh         	=	0.6462
-  calib_share_walk_all          	=	0.5717
+  calib_share_walk_0veh         	=	0.8151
+  calib_share_walk_1veh         	=	0.6999
+  calib_share_walk_2veh         	=	0.6171
+  calib_share_walk_3veh         	=	0.4356
+  calib_share_walk_all          	=	0.6226
 		
   ;bike shares 		
-  calib_share_bike_0veh         	=	0.2469
-  calib_share_bike_1veh         	=	0.3770
-  calib_share_bike_2veh         	=	0.5760
-  calib_share_bike_3veh         	=	0.3538
-  calib_share_bike_all          	=	0.4283
+  calib_share_bike_0veh         	=	0.1849
+  calib_share_bike_1veh         	=	0.3001
+  calib_share_bike_2veh         	=	0.3829
+  calib_share_bike_3veh         	=	0.5644
+  calib_share_bike_all          	=	0.3774
 		
 		
 ;relative within auto		
-  ;drive alone shares 		
-  calib_share_alone_0veh        	=	0.4878
-  calib_share_alone_1veh        	=	0.8364
-  calib_share_alone_2veh        	=	0.8621
-  calib_share_alone_3veh        	=	0.8646
-  calib_share_alone_all         	=	0.8550
-		
   ;shared ride shares 		
-  calib_share_shared_0veh       	=	0.5122
-  calib_share_shared_1veh       	=	0.1636
-  calib_share_shared_2veh       	=	0.1379
-  calib_share_shared_3veh       	=	0.1354
-  calib_share_shared_all        	=	0.1450
+  calib_share_shared_0veh       	=	1.0000
+  calib_share_shared_1veh       	=	1.0000
+  calib_share_shared_2veh       	=	1.0000
+  calib_share_shared_3veh       	=	1.0000
+  calib_share_shared_all        	=	1.0000
 		
 		
 ;relative within shared ride		
   ;sr2 shares 		
-  calib_share_sr2_0veh          	=	0.8571
-  calib_share_sr2_1veh          	=	0.7728
-  calib_share_sr2_2veh          	=	0.6856
-  calib_share_sr2_3veh          	=	0.7213
-  calib_share_sr2_all           	=	0.7221
+  calib_share_sr2_0veh          	=	0.8576
+  calib_share_sr2_1veh          	=	0.7958
+  calib_share_sr2_2veh          	=	0.7565
+  calib_share_sr2_3veh          	=	0.7025
+  calib_share_sr2_all           	=	0.7478
 		
   ;sr3 shares 		
-  calib_share_sr3_0veh          	=	0.1429
-  calib_share_sr3_1veh          	=	0.2272
-  calib_share_sr3_2veh          	=	0.3144
-  calib_share_sr3_3veh          	=	0.2787
-  calib_share_sr3_all           	=	0.2779
+  calib_share_sr3_0veh          	=	0.1424
+  calib_share_sr3_1veh          	=	0.2042
+  calib_share_sr3_2veh          	=	0.2435
+  calib_share_sr3_3veh          	=	0.2975
+  calib_share_sr3_all           	=	0.2522
 		
 		
 ;relative within motorized		
   ;auto shares 		
-  calib_share_auto_0veh         	=	0.3203
-  calib_share_auto_1veh         	=	0.9069
-  calib_share_auto_2veh         	=	0.9635
-  calib_share_auto_3veh         	=	0.9847
-  calib_share_auto_all          	=	0.9474
+  calib_share_auto_0veh         	=	0.5656
+  calib_share_auto_1veh         	=	0.8205
+  calib_share_auto_2veh         	=	0.8943
+  calib_share_auto_3veh         	=	0.9134
+  calib_share_auto_all          	=	0.8722
 		
   ;transit shares 		
-  calib_share_transit_0veh      	=	0.6797
-  calib_share_transit_1veh      	=	0.0931
-  calib_share_transit_2veh      	=	0.0365
-  calib_share_transit_3veh      	=	0.0153
-  calib_share_transit_all       	=	0.0526
+  calib_share_transit_0veh      	=	0.4344
+  calib_share_transit_1veh      	=	0.1795
+  calib_share_transit_2veh      	=	0.1057
+  calib_share_transit_3veh      	=	0.0866
+  calib_share_transit_all       	=	0.1278
  		
 		
 ;relative within transit		
