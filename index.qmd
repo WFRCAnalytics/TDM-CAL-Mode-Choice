@@ -897,7 +897,8 @@ def export_calib_file(purpose, period, include_veh_categories=True):
     file_period = 'pk' if period == 'Daily' else period.lower()
 
     # Determine display period for header
-    display_period = 'Pk' if period == 'PK' or period == 'Daily' else 'Ok'
+    display_period = file_period.capitalize()
+    # display_period = 'Pk' if period == 'PK' or period == 'Daily' else 'Ok'
 
     filename = f"calib_target_{purpose.lower()}_{file_period}.txt"
     filepath = os.path.join(output_dir, filename)
