@@ -354,7 +354,7 @@ df_obs_linked
 ```{python}
 # Load Linked Trips data from 2023 Household Travel Survey
 df_hts_linked = client.query(
-    "SELECT * FROM " + 'wfrc-modeling-data.prd_tdm_hts_2023.trip_linked'
+    "SELECT hh_id, PURP7_t, depart_per, linked_trip_mode_t, linked_trip_weight FROM " + 'wfrc-modeling-data.prd_tdm_hts_2023.trip_linked'
 ).to_dataframe()
 
 df_hts_linked
@@ -363,7 +363,7 @@ df_hts_linked
 ```{python}
 # Load Household data from 2023 Household Travel Survey
 df_hts_hh = client.query(
-    "SELECT * FROM " + 'wfrc-modeling-data.prd_tdm_hts_2023.hh'
+    "SELECT hh_id, num_vehicles_4cat FROM " + 'wfrc-modeling-data.prd_tdm_hts_2023.hh'
 ).to_dataframe()
 
 df_hts_hh
@@ -498,7 +498,7 @@ df_hts_linked['Purp5_text'] = df_hts_linked['PURP7_t'].map(purpose_mapping)
 ```{python}
 # Join household data to linked trips data
 df_hts_linked = df_hts_linked.merge(
-    df_hts_hh[['hh_id', 'num_vehicles_4cat']],  # Select only needed columns
+    df_hts_hh.rename(columns={'num_vehicles_4cat': 'Veh_Cat3p'}),
     on='hh_id',
     how='left'  # Keep all trips, even if household data is missing
 )
@@ -808,4 +808,309 @@ print("\nFirst few rows:")
 print(df_drive_to_transit.head(10))
 print("\nVerification:")
 verify_shares(df_drive_to_transit)
+```
+
+# Export Calibration Target Files
+
+## Output Folder
+
+```{python}
+# Create output directory if it doesn't exist
+output_dir = Path("_output")
+output_dir.mkdir(parents=True, exist_ok=True)
+
+print("=" * 80)
+print("EXPORTING CALIBRATION TARGET FILES")
+print("=" * 80)
+```
+
+## Helper Functions
+
+### Extract Values
+
+```{python}
+def extract_values(df, purpose, period, pattern, include_veh_categories=True):
+    """
+    Extract values from dataframe for given purpose/period matching a pattern.
+
+    Parameters:
+    -----------
+    df : DataFrame
+        DataFrame with MultiIndex columns (purpose, period)
+    purpose : str
+        Purpose to filter (e.g., 'HBW', 'HBO')
+    period : str
+        Period to filter (e.g., 'PK', 'OK', 'Daily')
+    pattern : str
+        Pattern to match in index (e.g., 'motor', 'bike', 'transit')
+    include_veh_categories : bool
+        If True, include all vehicle categories. If False, only include '_all' and strip suffix.
+
+    Returns:
+    --------
+    dict : {variable_name: value}
+    """
+    results = {}
+
+    # Check if column exists
+    if (purpose, period) not in df.columns:
+        return results
+
+    # Filter rows matching pattern
+    mask = df.index.str.contains(pattern)
+
+    for idx in df[mask].index:
+        value = df.loc[idx, (purpose, period)]
+
+        if include_veh_categories:
+            # Include all vehicle categories as-is
+            results[idx] = value
+        else:
+            # Only include '_all' suffix and strip it
+            if idx.endswith('_all'):
+                # Remove '_all' suffix
+                var_name = idx.rsplit('_', 1)[0]
+                results[var_name] = value
+
+    return results
+```
+
+### Export Function
+
+```{python}
+def export_calib_file(purpose, period, include_veh_categories=True):
+    """
+    Export calibration target file for a given purpose and period.
+
+    Parameters:
+    -----------
+    purpose : str
+        Trip purpose (HBW, HBO, NHB, HBC, HBSch)
+    period : str
+        Time period (PK, OK, Daily)
+    include_veh_categories : bool
+        If True, include vehicle category breakdowns (_0veh, _1veh, etc.)
+        If False, only use aggregate values without vehicle suffix
+    """
+
+    # Determine file period (Daily becomes 'pk' for HBC/HBSch)
+    file_period = 'pk' if period == 'Daily' else period.lower()
+
+    # Determine display period for header
+    display_period = 'Pk' if period == 'PK' or period == 'Daily' else 'Ok'
+
+    filename = f"calib_target_{purpose.lower()}_{file_period}.txt"
+    filepath = os.path.join(output_dir, filename)
+
+    print(f"\nCreating {filename}... (Vehicle categories: {'Yes' if include_veh_categories else 'No'})")
+
+    with open(filepath, 'w') as f:
+        # Write header
+        f.write(f";Calibration target values - {purpose} {display_period}\t\t\n")
+        f.write("\t\t\n")
+
+        # =====================================================================
+        # SECTION 1: Motorized vs Non-motorized (within total trips)
+        # =====================================================================
+        f.write(";relative within total trips\t\t\n")
+
+        # Non-motorized shares only
+        nonmotorized = extract_values(df_alltrips_cat, purpose, period, 'nonmotor_', include_veh_categories)
+        if nonmotorized:
+            f.write("  ;nonmotorized shares \t\t\n")
+            for var, val in sorted(nonmotorized.items()):
+                f.write(f"  {var:<30}\t=\t{val:.4f}\n")
+
+        f.write("\t\t\n")
+        f.write("\t\t\n")
+
+        # =====================================================================
+        # SECTION 2: Walk vs Bike (within nonmotorized)
+        # =====================================================================
+        f.write(";relative within nonmotorized\t\t\n")
+
+        # Walk shares
+        walk = extract_values(df_nonmotorized_cat, purpose, period, 'walk_', include_veh_categories)
+        if walk:
+            f.write("  ;walk shares \t\t\n")
+            for var, val in sorted(walk.items()):
+                f.write(f"  {var:<30}\t=\t{val:.4f}\n")
+            f.write("\t\t\n")
+
+        # Bike shares
+        bike = extract_values(df_nonmotorized_cat, purpose, period, 'bike_', include_veh_categories)
+        if bike:
+            f.write("  ;bike shares \t\t\n")
+            for var, val in sorted(bike.items()):
+                f.write(f"  {var:<30}\t=\t{val:.4f}\n")
+
+        f.write("\t\t\n")
+        f.write("\t\t\n")
+
+        # =====================================================================
+        # SECTION 3: Drive Alone vs Shared Ride (within auto)
+        # =====================================================================
+        f.write(";relative within auto\t\t\n")
+
+        # Drive alone shares
+        alone = extract_values(df_auto_riders, purpose, period, 'alone_', include_veh_categories)
+        if alone:
+            f.write("  ;drive alone shares \t\t\n")
+            for var, val in sorted(alone.items()):
+                f.write(f"  {var:<30}\t=\t{val:.4f}\n")
+            f.write("\t\t\n")
+
+        # Shared ride shares
+        shared = extract_values(df_auto_riders, purpose, period, 'shared_', include_veh_categories)
+        if shared:
+            f.write("  ;shared ride shares \t\t\n")
+            for var, val in sorted(shared.items()):
+                f.write(f"  {var:<30}\t=\t{val:.4f}\n")
+
+        f.write("\t\t\n")
+        f.write("\t\t\n")
+
+        # =====================================================================
+        # SECTION 4: SR2 vs SR3 (within shared ride)
+        # =====================================================================
+        f.write(";relative within shared ride\t\t\n")
+
+        # SR2 shares
+        sr2 = extract_values(df_shared_by_person, purpose, period, 'sr2_', include_veh_categories)
+        if sr2:
+            f.write("  ;sr2 shares \t\t\n")
+            for var, val in sorted(sr2.items()):
+                f.write(f"  {var:<30}\t=\t{val:.4f}\n")
+            f.write("\t\t\n")
+
+        # SR3 shares
+        sr3 = extract_values(df_shared_by_person, purpose, period, 'sr3_', include_veh_categories)
+        if sr3:
+            f.write("  ;sr3 shares \t\t\n")
+            for var, val in sorted(sr3.items()):
+                f.write(f"  {var:<30}\t=\t{val:.4f}\n")
+
+        f.write("\t\t\n")
+        f.write("\t\t\n")
+
+        # =====================================================================
+        # SECTION 5: Auto vs Transit (within motorized)
+        # =====================================================================
+        f.write(";relative within motorized\t\t\n")
+
+        # Auto shares
+        auto = extract_values(df_motorized_cat, purpose, period, 'auto_', include_veh_categories)
+        if auto:
+            f.write("  ;auto shares \t\t\n")
+            for var, val in sorted(auto.items()):
+                f.write(f"  {var:<30}\t=\t{val:.4f}\n")
+            f.write("\t\t\n")
+
+        # Transit shares
+        transit = extract_values(df_motorized_cat, purpose, period, 'transit_', include_veh_categories)
+        if transit:
+            f.write("  ;transit shares \t\t\n")
+            for var, val in sorted(transit.items()):
+                f.write(f"  {var:<30}\t=\t{val:.4f}\n")
+            f.write(" \t\t\n")
+
+        f.write("\t\t\n")
+
+        # =====================================================================
+        # SECTION 6: Transit by Service Type (within transit)
+        # =====================================================================
+        f.write(";relative within transit\t\t\n")
+
+        # Get all transit service types
+        service_types = ['local', 'core', 'brt', 'lrt', 'express', 'crt']
+        transit_services = {}
+        for service in service_types:
+            vals = extract_values(df_transit_by_service, purpose, period, f'{service}_', include_veh_categories)
+            transit_services.update(vals)
+
+        if transit_services:
+            for var, val in sorted(transit_services.items()):
+                f.write(f"  {var:<30}\t=\t{val:.4f}\n")
+            f.write("  \t\t\n")
+
+        f.write("\t\t\n")
+
+        # =====================================================================
+        # SECTION 7: Walk vs Drive Access (within transit)
+        # =====================================================================
+        f.write(";relative within transit\t\t\n")
+
+        # Walk access shares
+        walkacc = extract_values(df_transit_by_access, purpose, period, 'walkacc_', include_veh_categories)
+        if walkacc:
+            f.write("  ;walk-to-transit shares \t\t\n")
+            for var, val in sorted(walkacc.items()):
+                f.write(f"  {var:<30}\t=\t{val:.4f}\n")
+            f.write("\t\t\n")
+
+        # Drive access shares
+        driveacc = extract_values(df_transit_by_access, purpose, period, 'driveacc_', include_veh_categories)
+        if driveacc:
+            f.write("  ;drive-to-transit shares \t\t\n")
+            for var, val in sorted(driveacc.items()):
+                f.write(f"  {var:<30}\t=\t{val:.4f}\n")
+
+        f.write("\t\t\n")
+        f.write("\t\t\n")
+
+        # =====================================================================
+        # SECTION 8: Walk-to-Transit by Service (within walkacc)
+        # =====================================================================
+        f.write(";relative within walkacc\t\t\n")
+
+        # Get all walk-to-transit service types
+        walk_services = {}
+        for service in ['wlocal', 'wcore', 'wbrt', 'wlrt', 'wexpress', 'wcrt']:
+            vals = extract_values(df_walk_to_transit, purpose, period, f'{service}_', include_veh_categories)
+            walk_services.update(vals)
+
+        if walk_services:
+            for var, val in sorted(walk_services.items()):
+                f.write(f"  {var:<30}\t=\t{val:.4f}\n")
+
+        f.write("\t\t\n")
+        f.write("\t\t\n")
+
+        # =====================================================================
+        # SECTION 9: Drive-to-Transit by Service (within driveacc)
+        # =====================================================================
+        f.write(";relative within driveacc\t\t\n")
+
+        # Get all drive-to-transit service types
+        drive_services = {}
+        for service in ['dlocal', 'dcore', 'dbrt', 'dlrt', 'dexpress', 'dcrt']:
+            vals = extract_values(df_drive_to_transit, purpose, period, f'{service}_', include_veh_categories)
+            drive_services.update(vals)
+
+        if drive_services:
+            for var, val in sorted(drive_services.items()):
+                f.write(f"  {var:<30}\t=\t{val:.4f}\n")
+
+    print(f"  ✅ Written to {filepath}")
+```
+
+## Export All Files
+
+```{python}
+# Define purposes and their configuration
+export_config = {
+    'HBW':   {'periods': ['PK', 'OK'], 'include_veh': True},
+    'HBO':   {'periods': ['PK', 'OK'], 'include_veh': True},
+    'NHB':   {'periods': ['PK', 'OK'], 'include_veh': False},
+    'HBC':   {'periods': ['Daily'],    'include_veh': False},
+    'HBSch': {'periods': ['Daily'],    'include_veh': False}
+}
+
+for purpose, config in export_config.items():
+    for period in config['periods']:
+        export_calib_file(purpose, period, include_veh_categories=config['include_veh'])
+
+print("\n" + "=" * 80)
+print("✅ EXPORT COMPLETE!")
+print("=" * 80)
 ```

@@ -1,0 +1,69 @@
+;Calibration target values - NHB Pk		
+		
+;relative within total trips		
+  ;nonmotorized shares 		
+  calib_share_nonmotor          	=	0.0946
+		
+		
+;relative within nonmotorized		
+  ;walk shares 		
+  calib_share_walk              	=	0.9169
+		
+  ;bike shares 		
+  calib_share_bike              	=	0.0831
+		
+		
+;relative within auto		
+  ;drive alone shares 		
+  calib_share_alone             	=	0.3957
+		
+  ;shared ride shares 		
+  calib_share_shared            	=	0.6043
+		
+		
+;relative within shared ride		
+  ;sr2 shares 		
+  calib_share_sr2               	=	0.5032
+		
+  ;sr3 shares 		
+  calib_share_sr3               	=	0.4968
+		
+		
+;relative within motorized		
+  ;auto shares 		
+  calib_share_auto              	=	0.9880
+		
+  ;transit shares 		
+  calib_share_transit           	=	0.0120
+ 		
+		
+;relative within transit		
+  calib_share_brt               	=	0.1018
+  calib_share_crt               	=	0.0951
+  calib_share_express           	=	0.0062
+  calib_share_local             	=	0.3689
+  calib_share_lrt               	=	0.4279
+  		
+		
+;relative within transit		
+  ;walk-to-transit shares 		
+  calib_share_walkacc           	=	0.9383
+		
+  ;drive-to-transit shares 		
+  calib_share_driveacc          	=	0.0617
+		
+		
+;relative within walkacc		
+  calib_share_wbrt              	=	0.1085
+  calib_share_wcrt              	=	0.0722
+  calib_share_wexpress          	=	0.0066
+  calib_share_wlocal            	=	0.3822
+  calib_share_wlrt              	=	0.4305
+		
+		
+;relative within driveacc		
+  calib_share_dbrt              	=	0.0000
+  calib_share_dcrt              	=	0.4433
+  calib_share_dexpress          	=	0.0000
+  calib_share_dlocal            	=	0.1677
+  calib_share_dlrt              	=	0.3890
