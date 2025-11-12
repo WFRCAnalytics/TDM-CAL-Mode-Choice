@@ -8,11 +8,11 @@ project:
 website:
   title: "Analytics"
   description: The Wasatch Front Regional Council builds consensus and enhances quality of life by developing and implementing visions and plans for a well-functioning multi-modal transportation system, livable communities, a strong economy, and a healthy environment.The Wasatch Front Regional Council builds consensus and enhances quality of life by developing and implementing visions and plans for a well-functioning multi-modal transportation system, livable communities, a strong economy, and a healthy environment.
-  favicon: 'https://github.com/WFRCAnalytics/wfrcanalytics.github.io/blob/main/assets/logo/abbreviated/WFRC_logo_abbreviated_white_transparent.png'
+  favicon: "https://raw.githubusercontent.com/WFRCAnalytics/wfrcanalytics.github.io/main/assets/logo/abbreviated/WFRC_logo_abbreviated_white_transparent.png"
   site-url: 'https://wfrcanalytics.github.io'
 
   navbar:
-    logo: 'https://github.com/WFRCAnalytics/wfrcanalytics.github.io/blob/main/assets/logo/abbreviated/WFRC_logo_abbreviated_white_transparent.png'
+    logo: "https://raw.githubusercontent.com/WFRCAnalytics/wfrcanalytics.github.io/main/assets/logo/abbreviated/WFRC_logo_abbreviated_white_transparent.png"
     logo-alt: 'WFRC site theme-based logo'
 
 execute:
