@@ -517,7 +517,9 @@ df_hts_linked['PK_OK'] = np.where(
 )
 ```
 
-# Trips: Motorized vs Non-motorized
+# Data Exploration
+
+## Motorized vs Nonmotorized
 
 ```{python}
 (
@@ -542,6 +544,127 @@ df_hts_linked['PK_OK'] = np.where(
     .pipe(lambda x: (x / x.sum() * 100).round(2))
 )
 ```
+
+## HTS vs OBS Transit Trips
+
+### Filter for Transit Trips
+
+```{python}
+# Identify transit trips in HTS
+hts_transit = df_hts_linked[
+    df_hts_linked['model_trip_mode_WFv10'].isin(['walk-to-transit', 'drive-to-transit'])
+].copy()
+
+# Filter out microtransit
+obs_transit = df_obs_linked[df_obs_linked['Linked_Mode_txt'] != 'MT'].copy()
+```
+
+### By access mode
+
+```{python}
+hts_by_access = hts_transit.groupby('model_trip_mode_WFv10')['trip_weight'].sum()
+hts_by_access
+```
+
+```{python}
+if 'Ac_Mode2_Model' in obs_transit.columns:
+    obs_by_access = obs_transit.groupby('Ac_Mode2_Model')['LINKED_WEIGHT'].sum().sort_index()
+
+obs_by_access
+```
+
+### By purpose
+
+```{python}
+hts_by_purpose = hts_transit.groupby('Purp5_text')['trip_weight'].sum().sort_index()
+hts_by_purpose
+```
+
+```{python}
+obs_by_purpose = obs_transit.groupby('Purp5_text')['LINKED_WEIGHT'].sum().sort_index()
+obs_by_purpose
+```
+
+### By vehicle ownership
+
+```{python}
+hts_by_veh = hts_transit.groupby('Veh_Cat3p')['trip_weight'].sum().sort_index()
+hts_by_veh
+```
+
+```{python}
+obs_by_veh = obs_transit.groupby('Veh_Cat3p')['LINKED_WEIGHT'].sum().sort_index()
+obs_by_veh
+```
+
+### By period
+
+```{python}
+hts_by_period = hts_transit.groupby('PK_OK')['trip_weight'].sum().sort_index()
+hts_by_period
+```
+
+```{python}
+obs_by_period = obs_transit.groupby('PK_OK')['LINKED_WEIGHT'].sum().sort_index()
+obs_by_period
+```
+
+### Summary
+
+```{python}
+print("\n" + "=" * 80)
+print("3. COMPARISON SUMMARY")
+print("=" * 80)
+
+hts_total = hts_transit['trip_weight'].sum()
+obs_total = obs_transit['LINKED_WEIGHT'].sum()
+ratio = obs_total / hts_total if hts_total > 0 else 0
+
+print(f"\nHTS Daily Transit Trips:  {hts_total:>15,.1f}")
+print(f"OBS Daily Transit Trips:  {obs_total:>15,.1f}")
+print(f"{'─' * 45}")
+print(f"Ratio (OBS/HTS):          {ratio:>15.2f}x")
+print(f"Difference:               {obs_total - hts_total:>15,.1f}")
+print(f"% Difference:             {((obs_total/hts_total - 1) * 100):>15.1f}%")
+```
+
+```{python}
+print("\n" + "=" * 80)
+print("4. DETAILED COMPARISON BY PURPOSE & PERIOD")
+print("=" * 80)
+
+# Create comparison dataframe
+comparison_data = []
+
+for purpose in sorted(df_hts_linked['Purp5_text'].dropna().unique()):
+    for period in ['PK', 'OK']:
+        hts_val = hts_transit[
+            (hts_transit['Purp5_text'] == purpose) &
+            (hts_transit['PK_OK'] == period)
+        ]['trip_weight'].sum()
+
+        obs_val = obs_transit[
+            (obs_transit['Purp5_text'] == purpose) &
+            (obs_transit['PK_OK'] == period)
+        ]['LINKED_WEIGHT'].sum()
+
+        comparison_data.append({
+            'Purpose': purpose,
+            'Period': period,
+            'HTS_Trips': hts_val,
+            'OBS_Trips': obs_val,
+            'Ratio_OBS_HTS': obs_val / hts_val if hts_val > 0 else np.nan,
+            'Difference': obs_val - hts_val
+        })
+
+df_comparison = pd.DataFrame(comparison_data)
+df_comparison = df_comparison.sort_values(['Purpose', 'Period'])
+
+print("\n")
+print(df_comparison.to_string(index=False, float_format=lambda x: f'{x:,.2f}'))
+```
+
+# Trips: Motorized vs Non-motorized
 
 ```{python}
 # 1. All Trips: Motorized vs Non-motorized
