@@ -664,6 +664,43 @@ print("\n")
 print(df_comparison.to_string(index=False, float_format=lambda x: f'{x:,.2f}'))
 ```
 
+## Create Hybrid Dataframes (HTS Auto/Non-motorized + OBS Transit)
+
+```{python}
+# Non-motorized trips from HTS
+df_hts_nonmotor = (
+    df_hts_linked[df_hts_linked['model_trip_mode_WFv10'].isin(['walk', 'bike'])]
+    [['Veh_Cat3p', 'Purp5_text', 'PK_OK', 'model_trip_mode_WFv10', 'trip_weight']]
+    .rename(columns={'trip_weight': 'weight', 'model_trip_mode_WFv10': 'mode'})
+)
+
+df_hts_nonmotor
+```
+
+```{python}
+# Auto trips from HTS
+df_hts_auto = (
+    df_hts_linked[df_hts_linked['model_trip_mode_WFv10'].isin(['auto-sov', 'auto-occ2', 'auto-occ3p'])]
+    [['Veh_Cat3p', 'Purp5_text', 'PK_OK', 'model_trip_mode_WFv10', 'trip_weight']]
+    .rename(columns={'trip_weight': 'weight', 'model_trip_mode_WFv10': 'mode'})
+)
+
+df_hts_auto
+```
+
+```{python}
+# Transit trips from OBS
+df_obs_transit = (
+    df_obs_linked[df_obs_linked['Linked_Mode_txt'] != 'MT']
+    [['Veh_Cat3p', 'Purp5_text', 'PK_OK', 'Ac_Mode2_Model', 'LINKED_WEIGHT']]
+    .assign(mode=lambda x: x['Ac_Mode2_Model'].map({'Walk': 'walk-to-transit', 'Drive': 'drive-to-transit'}))
+    .rename(columns={'LINKED_WEIGHT': 'weight'})
+    [['Veh_Cat3p', 'Purp5_text', 'PK_OK', 'mode', 'weight']]
+)
+
+df_obs_transit
+```
+
 # Trips: Motorized vs Non-motorized
 
 ```{python}
@@ -672,23 +709,19 @@ print("\n" + "=" * 60)
 print("1. ALL TRIPS: MOTORIZED VS NON-MOTORIZED")
 print("=" * 60)
 
-all_trips_mapping = {
-    'auto-sov'         : 'motor',
-    'auto-occ2'        : 'motor',
-    'auto-occ3p'       : 'motor',
-    'walk-to-transit'  : 'motor',
-    'drive-to-transit' : 'motor',
-    'walk'             : 'nonmotor',
-    'bike'             : 'nonmotor'
-}
+df_alltrips_hybrid = pd.concat([
+    df_hts_auto.assign(mode_category='motor'),
+    df_obs_transit.assign(mode_category='motor'),
+    df_hts_nonmotor.assign(mode_category='nonmotor')
+], ignore_index=True)
 
 df_alltrips_cat = calculate_categorical_shares(
-    df_hts_linked,
-    category_col='model_trip_mode_WFv10',
-    weight_col='trip_weight',
+    df_alltrips_hybrid,
+    category_col='mode_category',
+    weight_col='weight',
     group_cols=['Veh_Cat3p', 'Purp5_text', 'PK_OK'],
-    filter_condition='model_trip_mode_WFv10 in ["auto-sov", "auto-occ2", "auto-occ3p", "walk-to-transit", "drive-to-transit", "walk", "bike"]',
-    category_mapping=all_trips_mapping,
+    filter_condition=None,
+    category_mapping=None,
     prefix='calib_share'
 )
 
@@ -737,21 +770,18 @@ print("\n" + "=" * 60)
 print("3. MOTORIZED TRIPS: AUTO VS TRANSIT")
 print("=" * 60)
 
-motorized_mapping = {
-    'auto-sov'         : 'auto',
-    'auto-occ2'        : 'auto',
-    'auto-occ3p'       : 'auto',
-    'walk-to-transit'  : 'transit',
-    'drive-to-transit' : 'transit'
-}
+df_motorized_hybrid = pd.concat([
+    df_hts_auto.assign(mode_category='auto'),
+    df_obs_transit.assign(mode_category='transit')
+], ignore_index=True)
 
 df_motorized_cat = calculate_categorical_shares(
-    df_hts_linked,
-    category_col='model_trip_mode_WFv10',
-    weight_col='trip_weight',
+    df_motorized_hybrid,
+    category_col='mode_category',
+    weight_col='weight',
     group_cols=['Veh_Cat3p', 'Purp5_text', 'PK_OK'],
-    filter_condition='model_trip_mode_WFv10 in ["auto-sov", "auto-occ2", "auto-occ3p", "walk-to-transit", "drive-to-transit"]',
-    category_mapping=motorized_mapping,
+    filter_condition=None,
+    category_mapping=None,
     prefix='calib_share'
 )
 
