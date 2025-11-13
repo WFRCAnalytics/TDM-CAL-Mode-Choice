@@ -1365,9 +1365,8 @@ fig.show()
 ```
 
 ```{python}
-# Create interactive treemap with properly coordinated dropdowns
+# Create interactive treemap with percentages of parent and total
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 import pandas as pd
 
 # Get unique values for dropdowns
@@ -1391,58 +1390,87 @@ for purpose in purposes:
                 labels = []
                 parents = []
                 values = []
+                text = []  # Custom text for hover
 
                 # Root
                 labels.append("All Trips")
                 parents.append("")
                 values.append(100)
+                text.append("All Trips<br>100%")
 
                 # Add all hierarchy levels
                 for _, row in df_filtered.iterrows():
                     # Level 1
                     if row['level1'] not in labels:
+                        level1_value = df_filtered[df_filtered['level1'] == row['level1']]['value'].sum()
                         labels.append(row['level1'])
                         parents.append("All Trips")
-                        values.append(df_filtered[df_filtered['level1'] == row['level1']]['value'].sum())
+                        values.append(level1_value)
+                        text.append(f"{row['level1']}<br>{level1_value:.2f}% of total")
 
                     # Level 2
                     if pd.notna(row['level2']):
                         level2_id = row['level2']
                         if level2_id not in labels:
-                            labels.append(level2_id)
-                            parents.append(row['level1'])
-                            values.append(df_filtered[
+                            level2_value = df_filtered[
                                 (df_filtered['level1'] == row['level1']) &
                                 (df_filtered['level2'] == row['level2'])
-                            ]['value'].sum())
+                            ]['value'].sum()
+                            level1_value = df_filtered[df_filtered['level1'] == row['level1']]['value'].sum()
+                            pct_of_parent = (level2_value / level1_value * 100) if level1_value > 0 else 0
+
+                            labels.append(level2_id)
+                            parents.append(row['level1'])
+                            values.append(level2_value)
+                            text.append(f"{level2_id}<br>{pct_of_parent:.1f}% of {row['level1']}<br>{level2_value:.2f}% of total")
 
                         # Level 3
                         if pd.notna(row['level3']):
                             level3_id = row['level3']
                             if level3_id not in labels:
-                                labels.append(level3_id)
-                                parents.append(level2_id)
-                                values.append(df_filtered[
+                                level3_value = df_filtered[
                                     (df_filtered['level1'] == row['level1']) &
                                     (df_filtered['level2'] == row['level2']) &
                                     (df_filtered['level3'] == row['level3'])
-                                ]['value'].sum())
+                                ]['value'].sum()
+                                level2_value = df_filtered[
+                                    (df_filtered['level1'] == row['level1']) &
+                                    (df_filtered['level2'] == row['level2'])
+                                ]['value'].sum()
+                                pct_of_parent = (level3_value / level2_value * 100) if level2_value > 0 else 0
+
+                                labels.append(level3_id)
+                                parents.append(level2_id)
+                                values.append(level3_value)
+                                text.append(f"{level3_id}<br>{pct_of_parent:.1f}% of {level2_id}<br>{level3_value:.2f}% of total")
 
                             # Level 4
                             if pd.notna(row['level4']):
                                 level4_id = row['level4']
+                                level4_value = row['value']
+                                level3_value = df_filtered[
+                                    (df_filtered['level1'] == row['level1']) &
+                                    (df_filtered['level2'] == row['level2']) &
+                                    (df_filtered['level3'] == row['level3'])
+                                ]['value'].sum()
+                                pct_of_parent = (level4_value / level3_value * 100) if level3_value > 0 else 0
+
                                 labels.append(level4_id)
                                 parents.append(level3_id)
-                                values.append(row['value'])
+                                values.append(level4_value)
+                                text.append(f"{level4_id}<br>{pct_of_parent:.1f}% of {level3_id}<br>{level4_value:.2f}% of total")
 
                 trace = go.Treemap(
                     labels=labels,
                     parents=parents,
                     values=values,
+                    customdata=text,
+                    textinfo="label",
+                    textposition="middle center",
+                    hovertemplate='<b>%{label}</b><br>%{customdata}<extra></extra>',
                     branchvalues="total",
                     visible=False,
-                    name=f"{purpose}_{period}_{veh_cat}",
-                    textposition="middle center"
+                    name=f"{purpose}_{period}_{veh_cat}"
                 )
 
                 trace_lookup[(purpose, period, veh_cat)] = len(traces)
