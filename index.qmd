@@ -520,6 +520,30 @@ df_hts_linked['PK_OK'] = np.where(
 # Trips: Motorized vs Non-motorized
 
 ```{python}
+(
+    df_hts_linked[
+        (df_hts_linked['model_trip_mode_WFv10'].isin(
+            ["auto-sov", "auto-occ2", "auto-occ3p", "walk-to-transit",
+             "drive-to-transit", "walk", "bike"]
+        )) &
+        (df_hts_linked['Purp5_text'] == 'HBW')
+    ]
+    .assign(motorized_category=lambda x: x['model_trip_mode_WFv10'].map({
+        'auto-sov'         : 'motor',
+        'auto-occ2'        : 'motor',
+        'auto-occ3p'       : 'motor',
+        'walk-to-transit'  : 'motor',
+        'drive-to-transit' : 'motor',
+        'walk'             : 'nonmotor',
+        'bike'             : 'nonmotor'
+    }))
+    .groupby('motorized_category')['trip_weight']
+    .sum()
+    .pipe(lambda x: (x / x.sum() * 100).round(2))
+)
+```
+
+```{python}
 # 1. All Trips: Motorized vs Non-motorized
 print("\n" + "=" * 60)
 print("1. ALL TRIPS: MOTORIZED VS NON-MOTORIZED")
@@ -592,8 +616,8 @@ print("=" * 60)
 
 motorized_mapping = {
     'auto-sov'         : 'auto',
-    'auto_occ2'        : 'auto',
-    'auto_occ3p'       : 'auto',
+    'auto-occ2'        : 'auto',
+    'auto-occ3p'       : 'auto',
     'walk-to-transit'  : 'transit',
     'drive-to-transit' : 'transit'
 }
@@ -603,7 +627,7 @@ df_motorized_cat = calculate_categorical_shares(
     category_col='model_trip_mode_WFv10',
     weight_col='trip_weight',
     group_cols=['Veh_Cat3p', 'Purp5_text', 'PK_OK'],
-    filter_condition='model_trip_mode_WFv10 in ["auto-sov", "auto_occ2", "auto_occ3p", "walk-to-transit", "drive-to-transit"]',
+    filter_condition='model_trip_mode_WFv10 in ["auto-sov", "auto-occ2", "auto-occ3p", "walk-to-transit", "drive-to-transit"]',
     category_mapping=motorized_mapping,
     prefix='calib_share'
 )
@@ -625,8 +649,8 @@ print("=" * 60)
 
 auto_ride_mapping = {
     'auto-sov'   : 'alone',
-    'auto_occ2'  : 'shared',
-    'auto_occ3p' : 'shared'
+    'auto-occ2'  : 'shared',
+    'auto-occ3p' : 'shared'
 }
 
 df_auto_riders = calculate_categorical_shares(
@@ -634,7 +658,7 @@ df_auto_riders = calculate_categorical_shares(
     category_col='model_trip_mode_WFv10',
     weight_col='trip_weight',
     group_cols=['Veh_Cat3p', 'Purp5_text', 'PK_OK'],
-    filter_condition='model_trip_mode_WFv10 in ["auto-sov", "auto_occ2", "auto_occ3p"]',
+    filter_condition='model_trip_mode_WFv10 in ["auto-sov", "auto-occ2", "auto-occ3p"]',
     category_mapping=auto_ride_mapping,
     prefix='calib_share'
 )
@@ -655,8 +679,8 @@ print("5. SHARED RIDER BY NUMBER OF PEOPLE")
 print("=" * 60)
 
 shared_ride_mapping = {
-    'auto_occ2' : 'sr2',
-    'auto_occ3p': 'sr3'
+    'auto-occ2' : 'sr2',
+    'auto-occ3p': 'sr3'
 }
 
 df_shared_by_person = calculate_categorical_shares(
@@ -664,7 +688,7 @@ df_shared_by_person = calculate_categorical_shares(
     category_col='model_trip_mode_WFv10',
     weight_col='trip_weight',
     group_cols=['Veh_Cat3p', 'Purp5_text', 'PK_OK'],
-    filter_condition='model_trip_mode_WFv10 in ["auto_occ2", "auto_occ3p"]',
+    filter_condition='model_trip_mode_WFv10 in ["auto-occ2", "auto-occ3p"]',
     category_mapping=shared_ride_mapping,
     prefix='calib_share'
 )
@@ -897,18 +921,32 @@ def create_tree_dataframe(
     walkacc_share = get_value(df_transit_by_access, 'walkacc', purpose, veh_cat, period)
     driveacc_share = get_value(df_transit_by_access, 'driveacc', purpose, veh_cat, period)
 
+    # Get walk-to-transit service type shares
+    wlocal_share = get_value(df_walk_to_transit, 'wlocal', purpose, veh_cat, period)
+    wcore_share = get_value(df_walk_to_transit, 'wcore', purpose, veh_cat, period)
+    wexpress_share = get_value(df_walk_to_transit, 'wexpress', purpose, veh_cat, period)
+    wlrt_share = get_value(df_walk_to_transit, 'wlrt', purpose, veh_cat, period)
+    wcrt_share = get_value(df_walk_to_transit, 'wcrt', purpose, veh_cat, period)
+    wbrt_share = get_value(df_walk_to_transit, 'wbrt', purpose, veh_cat, period)
+
+    # Get drive-to-transit service type shares
+    dlocal_share = get_value(df_drive_to_transit, 'dlocal', purpose, veh_cat, period)
+    dcore_share = get_value(df_drive_to_transit, 'dcore', purpose, veh_cat, period)
+    dexpress_share = get_value(df_drive_to_transit, 'dexpress', purpose, veh_cat, period)
+    dlrt_share = get_value(df_drive_to_transit, 'dlrt', purpose, veh_cat, period)
+    dcrt_share = get_value(df_drive_to_transit, 'dcrt', purpose, veh_cat, period)
+    dbrt_share = get_value(df_drive_to_transit, 'dbrt', purpose, veh_cat, period)
+
     # Base value
     total_value = 1.0
 
     # Create rows in path format
-    # Each value is calculated by multiplying all parent shares iteratively
     rows = []
 
     # Determine display period
     display_period = period if period else 'Daily'
 
     # Non-motorized branch
-    # Walk = total * nonmotor_share * walk_share
     rows.append({
         'purpose': purpose,
         'period': display_period,
@@ -920,7 +958,6 @@ def create_tree_dataframe(
         'value': total_value * nonmotor_share * walk_share * 100
     })
 
-    # Bike = total * nonmotor_share * bike_share
     rows.append({
         'purpose': purpose,
         'period': display_period,
@@ -933,7 +970,6 @@ def create_tree_dataframe(
     })
 
     # Motorized > Auto > Drive Alone
-    # Drive Alone = total * motor_share * auto_share * alone_share
     rows.append({
         'purpose': purpose,
         'period': display_period,
@@ -946,7 +982,6 @@ def create_tree_dataframe(
     })
 
     # Motorized > Auto > Shared Ride > SR2
-    # SR2 = total * motor_share * auto_share * shared_share * sr2_share
     rows.append({
         'purpose': purpose,
         'period': display_period,
@@ -959,7 +994,6 @@ def create_tree_dataframe(
     })
 
     # Motorized > Auto > Shared Ride > SR3
-    # SR3 = total * motor_share * auto_share * shared_share * sr3_share
     rows.append({
         'purpose': purpose,
         'period': display_period,
@@ -971,8 +1005,9 @@ def create_tree_dataframe(
         'value': total_value * motor_share * auto_share * shared_share * sr3_share * 100
     })
 
-    # Motorized > Transit > Walk-to-Transit
-    # Walk-to-Transit = total * motor_share * transit_share * walkacc_share
+    # Motorized > Transit > Walk-to-Transit > Service Types
+    walk_transit_base = total_value * motor_share * transit_share * walkacc_share * 100
+
     rows.append({
         'purpose': purpose,
         'period': display_period,
@@ -980,12 +1015,68 @@ def create_tree_dataframe(
         'level1': 'Motorized',
         'level2': 'Transit',
         'level3': 'Walk-to-Transit',
-        'level4': None,
-        'value': total_value * motor_share * transit_share * walkacc_share * 100
+        'level4': 'Local Bus',
+        'value': walk_transit_base * wlocal_share
     })
 
-    # Motorized > Transit > Drive-to-Transit
-    # Drive-to-Transit = total * motor_share * transit_share * driveacc_share
+    rows.append({
+        'purpose': purpose,
+        'period': display_period,
+        'veh_cat': veh_cat,
+        'level1': 'Motorized',
+        'level2': 'Transit',
+        'level3': 'Walk-to-Transit',
+        'level4': 'Core Bus',
+        'value': walk_transit_base * wcore_share
+    })
+
+    rows.append({
+        'purpose': purpose,
+        'period': display_period,
+        'veh_cat': veh_cat,
+        'level1': 'Motorized',
+        'level2': 'Transit',
+        'level3': 'Walk-to-Transit',
+        'level4': 'Express Bus',
+        'value': walk_transit_base * wexpress_share
+    })
+
+    rows.append({
+        'purpose': purpose,
+        'period': display_period,
+        'veh_cat': veh_cat,
+        'level1': 'Motorized',
+        'level2': 'Transit',
+        'level3': 'Walk-to-Transit',
+        'level4': 'LRT',
+        'value': walk_transit_base * wlrt_share
+    })
+
+    rows.append({
+        'purpose': purpose,
+        'period': display_period,
+        'veh_cat': veh_cat,
+        'level1': 'Motorized',
+        'level2': 'Transit',
+        'level3': 'Walk-to-Transit',
+        'level4': 'CRT',
+        'value': walk_transit_base * wcrt_share
+    })
+
+    rows.append({
+        'purpose': purpose,
+        'period': display_period,
+        'veh_cat': veh_cat,
+        'level1': 'Motorized',
+        'level2': 'Transit',
+        'level3': 'Walk-to-Transit',
+        'level4': 'BRT',
+        'value': walk_transit_base * wbrt_share
+    })
+
+    # Motorized > Transit > Drive-to-Transit > Service Types
+    drive_transit_base = total_value * motor_share * transit_share * driveacc_share * 100
+
     rows.append({
         'purpose': purpose,
         'period': display_period,
@@ -993,8 +1084,63 @@ def create_tree_dataframe(
         'level1': 'Motorized',
         'level2': 'Transit',
         'level3': 'Drive-to-Transit',
-        'level4': None,
-        'value': total_value * motor_share * transit_share * driveacc_share * 100
+        'level4': 'Local Bus',
+        'value': drive_transit_base * dlocal_share
+    })
+
+    rows.append({
+        'purpose': purpose,
+        'period': display_period,
+        'veh_cat': veh_cat,
+        'level1': 'Motorized',
+        'level2': 'Transit',
+        'level3': 'Drive-to-Transit',
+        'level4': 'Core Bus',
+        'value': drive_transit_base * dcore_share
+    })
+
+    rows.append({
+        'purpose': purpose,
+        'period': display_period,
+        'veh_cat': veh_cat,
+        'level1': 'Motorized',
+        'level2': 'Transit',
+        'level3': 'Drive-to-Transit',
+        'level4': 'Express Bus',
+        'value': drive_transit_base * dexpress_share
+    })
+
+    rows.append({
+        'purpose': purpose,
+        'period': display_period,
+        'veh_cat': veh_cat,
+        'level1': 'Motorized',
+        'level2': 'Transit',
+        'level3': 'Drive-to-Transit',
+        'level4': 'LRT',
+        'value': drive_transit_base * dlrt_share
+    })
+
+    rows.append({
+        'purpose': purpose,
+        'period': display_period,
+        'veh_cat': veh_cat,
+        'level1': 'Motorized',
+        'level2': 'Transit',
+        'level3': 'Drive-to-Transit',
+        'level4': 'CRT',
+        'value': drive_transit_base * dcrt_share
+    })
+
+    rows.append({
+        'purpose': purpose,
+        'period': display_period,
+        'veh_cat': veh_cat,
+        'level1': 'Motorized',
+        'level2': 'Transit',
+        'level3': 'Drive-to-Transit',
+        'level4': 'BRT',
+        'value': drive_transit_base * dbrt_share
     })
 
     df_tree = pd.DataFrame(rows)
@@ -1014,7 +1160,11 @@ all_dfs = []
 # Loop through all combinations
 for purpose in purposes:
     for period in periods:
-        # Skip PK/OK for HBC and HBSch (they only have Daily)
+        # Skip Daily for purposes that have PK/OK breakdown
+        if purpose in ['HBW', 'HBO', 'NHB'] and period == 'Daily':
+            continue
+
+        # Skip PK/OK for purposes that only have Daily
         if purpose in ['HBC', 'HBSch'] and period in ['PK', 'OK']:
             continue
 
@@ -1041,6 +1191,9 @@ df_tree_all.head(20)
 ```
 
 ```{python}
+#| echo: false
+#| eval: false
+
 # Create a simple treemap for HBW, all vehicles, PK period
 df_filtered = df_tree_all.query("purpose == 'HBW' & veh_cat == 'all' & period == 'PK'").copy()
 
@@ -1050,7 +1203,8 @@ import plotly.express as px
 fig = px.treemap(
     df_filtered,
     path=[px.Constant("All Trips"), 'level1', 'level2', 'level3', 'level4'],
-    values='value'
+    values='value',
+    branchvalues="total"
 )
 fig.update_traces(root_color="lightgrey")
 fig.update_layout(margin = dict(t=50, l=25, r=25, b=25))
@@ -1058,18 +1212,19 @@ fig.show()
 ```
 
 ```{python}
-# Create interactive treemap with 3 separate dropdowns
-import plotly.express as px
+# Create interactive treemap with properly coordinated dropdowns
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+import pandas as pd
 
 # Get unique values for dropdowns
 purposes = sorted(df_tree_all['purpose'].unique())
 periods = sorted(df_tree_all['period'].unique())
 veh_cats = sorted(df_tree_all['veh_cat'].unique())
 
-# Create all trace combinations
+# Create all trace combinations and store them
 traces = []
-trace_index = {}  # Map (purpose, period, veh_cat) to trace index
+trace_lookup = {}  # Map (purpose, period, veh_cat) to trace index
 
 for purpose in purposes:
     for period in periods:
@@ -1079,129 +1234,115 @@ for purpose in purposes:
             ).copy()
 
             if len(df_filtered) > 0:
-                # Create temporary figure to extract trace
-                fig_temp = px.treemap(
-                    df_filtered,
-                    path=[px.Constant("All Trips"), 'level1', 'level2', 'level3', 'level4'],
-                    values='value'
+                # Create treemap trace
+                labels = []
+                parents = []
+                values = []
+
+                # Root
+                labels.append("All Trips")
+                parents.append("")
+                values.append(100)
+
+                # Add all hierarchy levels
+                for _, row in df_filtered.iterrows():
+                    # Level 1
+                    if row['level1'] not in labels:
+                        labels.append(row['level1'])
+                        parents.append("All Trips")
+                        values.append(df_filtered[df_filtered['level1'] == row['level1']]['value'].sum())
+
+                    # Level 2
+                    if pd.notna(row['level2']):
+                        level2_id = row['level2']
+                        if level2_id not in labels:
+                            labels.append(level2_id)
+                            parents.append(row['level1'])
+                            values.append(df_filtered[
+                                (df_filtered['level1'] == row['level1']) &
+                                (df_filtered['level2'] == row['level2'])
+                            ]['value'].sum())
+
+                        # Level 3
+                        if pd.notna(row['level3']):
+                            level3_id = row['level3']
+                            if level3_id not in labels:
+                                labels.append(level3_id)
+                                parents.append(level2_id)
+                                values.append(df_filtered[
+                                    (df_filtered['level1'] == row['level1']) &
+                                    (df_filtered['level2'] == row['level2']) &
+                                    (df_filtered['level3'] == row['level3'])
+                                ]['value'].sum())
+
+                            # Level 4
+                            if pd.notna(row['level4']):
+                                level4_id = row['level4']
+                                labels.append(level4_id)
+                                parents.append(level3_id)
+                                values.append(row['value'])
+
+                trace = go.Treemap(
+                    labels=labels,
+                    parents=parents,
+                    values=values,
+                    branchvalues="total",
+                    visible=False,
+                    name=f"{purpose}_{period}_{veh_cat}",
+                    textposition="middle center"
                 )
 
-                trace = fig_temp.data[0]
-                trace.visible = False  # Hide all traces initially
-                trace.name = f"{purpose}_{period}_{veh_cat}"
-
-                trace_index[(purpose, period, veh_cat)] = len(traces)
+                trace_lookup[(purpose, period, veh_cat)] = len(traces)
                 traces.append(trace)
 
-# Set first trace as visible
-if traces:
-    traces[0].visible = True
-    initial_purpose = purposes[0]
-    initial_period = periods[0]
-    initial_veh = veh_cats[0]
+# Set initial trace visible
+initial_purpose = 'HBW'
+initial_period = 'PK'
+initial_veh = 'all'
 
-# Create figure with all traces
+if (initial_purpose, initial_period, initial_veh) in trace_lookup:
+    traces[trace_lookup[(initial_purpose, initial_period, initial_veh)]].visible = True
+
+# Create figure
 fig = go.Figure(data=traces)
-fig.update_traces(root_color="lightgrey")
 
-# Create dropdown buttons for Purpose
-purpose_buttons = []
+# Create combined dropdown options (all combinations)
+dropdown_options = []
+
 for purpose in purposes:
-    # When purpose changes, show trace for this purpose with current period and veh_cat
-    visible = [False] * len(traces)
-
-    # Find and show the first valid combination with this purpose
     for period in periods:
+        # Check if this purpose-period combination exists
+        has_data = False
         for veh_cat in veh_cats:
-            if (purpose, period, veh_cat) in trace_index:
-                idx = trace_index[(purpose, period, veh_cat)]
-                visible[idx] = True
+            if (purpose, period, veh_cat) in trace_lookup:
+                has_data = True
                 break
-        if any(visible):
-            break
 
-    purpose_buttons.append(
-        dict(
-            label=purpose,
-            method="update",
-            args=[
-                {"visible": visible},
-                {"title": f"Mode Choice Hierarchy: {purpose}"}
-            ]
-        )
-    )
+        if not has_data:
+            continue
 
-# Create dropdown buttons for Period
-period_buttons = []
-for period in periods:
-    visible = [False] * len(traces)
-
-    # Show first valid combination with this period
-    for purpose in purposes:
         for veh_cat in veh_cats:
-            if (purpose, period, veh_cat) in trace_index:
-                idx = trace_index[(purpose, period, veh_cat)]
+            if (purpose, period, veh_cat) in trace_lookup:
+                visible = [False] * len(traces)
+                idx = trace_lookup[(purpose, period, veh_cat)]
                 visible[idx] = True
-                break
-        if any(visible):
-            break
 
-    period_buttons.append(
-        dict(
-            label=period,
-            method="update",
-            args=[
-                {"visible": visible},
-                {"title": f"Mode Choice Hierarchy - {period}"}
-            ]
-        )
-    )
+                dropdown_options.append(
+                    dict(
+                        label=f"{purpose} | {period} | {veh_cat}",
+                        method="update",
+                        args=[
+                            {"visible": visible},
+                            {"title": f"Mode Choice Hierarchy: {purpose} - {period} - {veh_cat}"}
+                        ]
+                    )
+                )
 
-# Create dropdown buttons for Vehicle Category
-veh_buttons = []
-for veh_cat in veh_cats:
-    visible = [False] * len(traces)
-
-    # Show first valid combination with this veh_cat
-    for purpose in purposes:
-        for period in periods:
-            if (purpose, period, veh_cat) in trace_index:
-                idx = trace_index[(purpose, period, veh_cat)]
-                visible[idx] = True
-                break
-        if any(visible):
-            break
-
-    veh_buttons.append(
-        dict(
-            label=veh_cat,
-            method="update",
-            args=[
-                {"visible": visible},
-                {"title": f"Mode Choice Hierarchy - {veh_cat}"}
-            ]
-        )
-    )
-
-# Update layout with three dropdowns
+# Update layout with single combined dropdown
 fig.update_layout(
     updatemenus=[
-        # Purpose dropdown
         dict(
-            buttons=purpose_buttons,
-            direction="down",
-            showactive=True,
-            x=0.17,
-            xanchor="left",
-            y=1.15,
-            yanchor="top",
-            bgcolor="white",
-            bordercolor="gray",
-            borderwidth=1
-        ),
-        # Period dropdown
-        dict(
-            buttons=period_buttons,
+            buttons=dropdown_options,
             direction="down",
             showactive=True,
             x=0.5,
@@ -1211,33 +1352,14 @@ fig.update_layout(
             bgcolor="white",
             bordercolor="gray",
             borderwidth=1
-        ),
-        # Vehicle category dropdown
-        dict(
-            buttons=veh_buttons,
-            direction="down",
-            showactive=True,
-            x=0.83,
-            xanchor="right",
-            y=1.15,
-            yanchor="top",
-            bgcolor="white",
-            bordercolor="gray",
-            borderwidth=1
         )
-    ],
-    annotations=[
-        dict(text="<b>Purpose:</b>", x=0.02, y=1.13, xref="paper", yref="paper",
-             showarrow=False, font=dict(size=12), xanchor="left"),
-        dict(text="<b>Period:</b>", x=0.38, y=1.13, xref="paper", yref="paper",
-             showarrow=False, font=dict(size=12), xanchor="left"),
-        dict(text="<b>Vehicle:</b>", x=0.68, y=1.13, xref="paper", yref="paper",
-             showarrow=False, font=dict(size=12), xanchor="left")
     ],
     title=f"Mode Choice Hierarchy: {initial_purpose} - {initial_period} - {initial_veh}",
     margin=dict(t=120, l=25, r=25, b=25),
     height=800
 )
+
+fig.update_traces(root_color="lightgrey")
 
 fig.show()
 ```
