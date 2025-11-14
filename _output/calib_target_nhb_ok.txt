@@ -4,7 +4,7 @@
 		
 ;relative within total trips		
   ;nonmotorized shares 		
-  calib_share_nonmotor_0veh     	=	0.4121
+  calib_share_nonmotor_0veh     	=	0.4128
   calib_share_nonmotor_1veh     	=	0.0835
   calib_share_nonmotor_2veh     	=	0.0829
   calib_share_nonmotor_3veh     	=	0.0655
@@ -61,114 +61,114 @@
 		
 ;relative within motorized		
   ;auto shares 		
-  calib_share_auto_0veh         	=	0.8482
-  calib_share_auto_1veh         	=	0.9964
+  calib_share_auto_0veh         	=	0.8507
+  calib_share_auto_1veh         	=	0.9963
   calib_share_auto_2veh         	=	0.9988
   calib_share_auto_3veh         	=	0.9991
   calib_share_auto_all          	=	0.9974
 		
   ;transit shares 		
-  calib_share_transit_0veh      	=	0.1518
-  calib_share_transit_1veh      	=	0.0036
+  calib_share_transit_0veh      	=	0.1493
+  calib_share_transit_1veh      	=	0.0037
   calib_share_transit_2veh      	=	0.0012
   calib_share_transit_3veh      	=	0.0009
   calib_share_transit_all       	=	0.0026
  		
 		
 ;relative within transit		
-  calib_share_brt_0veh          	=	0.1534
-  calib_share_brt_1veh          	=	0.1486
-  calib_share_brt_2veh          	=	0.2194
-  calib_share_brt_3veh          	=	0.1834
-  calib_share_brt_all           	=	0.1691
-  calib_share_crt_0veh          	=	0.0321
-  calib_share_crt_1veh          	=	0.0795
-  calib_share_crt_2veh          	=	0.0738
-  calib_share_crt_3veh          	=	0.0551
-  calib_share_crt_all           	=	0.0557
+  calib_share_brt_0veh          	=	0.1334
+  calib_share_brt_1veh          	=	0.1409
+  calib_share_brt_2veh          	=	0.1891
+  calib_share_brt_3veh          	=	0.1585
+  calib_share_brt_all           	=	0.1495
+  calib_share_crt_0veh          	=	0.0330
+  calib_share_crt_1veh          	=	0.0801
+  calib_share_crt_2veh          	=	0.0748
+  calib_share_crt_3veh          	=	0.0533
+  calib_share_crt_all           	=	0.0562
   calib_share_express_0veh      	=	0.0000
   calib_share_express_1veh      	=	0.0000
-  calib_share_express_2veh      	=	0.0048
+  calib_share_express_2veh      	=	0.0032
   calib_share_express_3veh      	=	0.0000
-  calib_share_express_all       	=	0.0010
-  calib_share_local_0veh        	=	0.3631
-  calib_share_local_1veh        	=	0.3417
-  calib_share_local_2veh        	=	0.2788
-  calib_share_local_3veh        	=	0.3045
-  calib_share_local_all         	=	0.3332
-  calib_share_lrt_0veh          	=	0.4514
-  calib_share_lrt_1veh          	=	0.4302
-  calib_share_lrt_2veh          	=	0.4231
-  calib_share_lrt_3veh          	=	0.4570
-  calib_share_lrt_all           	=	0.4410
+  calib_share_express_all       	=	0.0006
+  calib_share_local_0veh        	=	0.3723
+  calib_share_local_1veh        	=	0.3399
+  calib_share_local_2veh        	=	0.2875
+  calib_share_local_3veh        	=	0.3204
+  calib_share_local_all         	=	0.3404
+  calib_share_lrt_0veh          	=	0.4613
+  calib_share_lrt_1veh          	=	0.4391
+  calib_share_lrt_2veh          	=	0.4455
+  calib_share_lrt_3veh          	=	0.4677
+  calib_share_lrt_all           	=	0.4532
   		
 		
 ;relative within transit		
   ;walk-to-transit shares 		
-  calib_share_walkacc_0veh      	=	0.9437
-  calib_share_walkacc_1veh      	=	0.9549
-  calib_share_walkacc_2veh      	=	0.9750
-  calib_share_walkacc_3veh      	=	0.9625
-  calib_share_walkacc_all       	=	0.9552
+  calib_share_walkacc_0veh      	=	0.9463
+  calib_share_walkacc_1veh      	=	0.9537
+  calib_share_walkacc_2veh      	=	0.9759
+  calib_share_walkacc_3veh      	=	0.9642
+  calib_share_walkacc_all       	=	0.9564
 		
   ;drive-to-transit shares 		
-  calib_share_driveacc_0veh     	=	0.0563
-  calib_share_driveacc_1veh     	=	0.0451
-  calib_share_driveacc_2veh     	=	0.0250
-  calib_share_driveacc_3veh     	=	0.0375
-  calib_share_driveacc_all      	=	0.0448
+  calib_share_driveacc_0veh     	=	0.0537
+  calib_share_driveacc_1veh     	=	0.0463
+  calib_share_driveacc_2veh     	=	0.0241
+  calib_share_driveacc_3veh     	=	0.0358
+  calib_share_driveacc_all      	=	0.0436
 		
 		
 ;relative within walkacc		
-  calib_share_wbrt_0veh         	=	0.1575
-  calib_share_wbrt_1veh         	=	0.1556
-  calib_share_wbrt_2veh         	=	0.2190
-  calib_share_wbrt_3veh         	=	0.1906
-  calib_share_wbrt_all          	=	0.1738
-  calib_share_wcrt_0veh         	=	0.0177
-  calib_share_wcrt_1veh         	=	0.0648
-  calib_share_wcrt_2veh         	=	0.0561
-  calib_share_wcrt_3veh         	=	0.0247
-  calib_share_wcrt_all          	=	0.0386
+  calib_share_wbrt_0veh         	=	0.1367
+  calib_share_wbrt_1veh         	=	0.1477
+  calib_share_wbrt_2veh         	=	0.1886
+  calib_share_wbrt_3veh         	=	0.1644
+  calib_share_wbrt_all          	=	0.1536
+  calib_share_wcrt_0veh         	=	0.0182
+  calib_share_wcrt_1veh         	=	0.0659
+  calib_share_wcrt_2veh         	=	0.0570
+  calib_share_wcrt_3veh         	=	0.0240
+  calib_share_wcrt_all          	=	0.0392
   calib_share_wexpress_0veh     	=	0.0000
   calib_share_wexpress_1veh     	=	0.0000
-  calib_share_wexpress_2veh     	=	0.0050
+  calib_share_wexpress_2veh     	=	0.0033
   calib_share_wexpress_3veh     	=	0.0000
-  calib_share_wexpress_all      	=	0.0010
-  calib_share_wlocal_0veh       	=	0.3831
-  calib_share_wlocal_1veh       	=	0.3528
-  calib_share_wlocal_2veh       	=	0.2860
-  calib_share_wlocal_3veh       	=	0.3164
-  calib_share_wlocal_all        	=	0.3469
-  calib_share_wlrt_0veh         	=	0.4417
-  calib_share_wlrt_1veh         	=	0.4267
-  calib_share_wlrt_2veh         	=	0.4340
-  calib_share_wlrt_3veh         	=	0.4684
-  calib_share_wlrt_all          	=	0.4397
+  calib_share_wexpress_all      	=	0.0007
+  calib_share_wlocal_0veh       	=	0.3918
+  calib_share_wlocal_1veh       	=	0.3516
+  calib_share_wlocal_2veh       	=	0.2946
+  calib_share_wlocal_3veh       	=	0.3323
+  calib_share_wlocal_all        	=	0.3540
+  calib_share_wlrt_0veh         	=	0.4533
+  calib_share_wlrt_1veh         	=	0.4347
+  calib_share_wlrt_2veh         	=	0.4565
+  calib_share_wlrt_3veh         	=	0.4793
+  calib_share_wlrt_all          	=	0.4525
 		
 		
 ;relative within driveacc		
-  calib_share_dbrt_0veh         	=	0.0852
+  calib_share_dbrt_0veh         	=	0.0755
   calib_share_dbrt_1veh         	=	0.0000
-  calib_share_dbrt_2veh         	=	0.2350
+  calib_share_dbrt_2veh         	=	0.2078
   calib_share_dbrt_3veh         	=	0.0000
-  calib_share_dbrt_all          	=	0.0703
-  calib_share_dcrt_0veh         	=	0.2737
-  calib_share_dcrt_1veh         	=	0.3903
-  calib_share_dcrt_2veh         	=	0.7650
-  calib_share_dcrt_3veh         	=	0.8355
-  calib_share_dcrt_all          	=	0.4197
+  calib_share_dbrt_all          	=	0.0604
+  calib_share_dcrt_0veh         	=	0.2946
+  calib_share_dcrt_1veh         	=	0.3714
+  calib_share_dcrt_2veh         	=	0.7922
+  calib_share_dcrt_3veh         	=	0.8431
+  calib_share_dcrt_all          	=	0.4291
   calib_share_dexpress_1veh     	=	0.0000
   calib_share_dexpress_2veh     	=	0.0000
   calib_share_dexpress_3veh     	=	0.0000
   calib_share_dexpress_all      	=	0.0000
-  calib_share_dlocal_0veh       	=	0.0278
-  calib_share_dlocal_1veh       	=	0.1057
+  calib_share_dlocal_0veh       	=	0.0287
+  calib_share_dlocal_1veh       	=	0.0988
   calib_share_dlocal_2veh       	=	0.0000
   calib_share_dlocal_3veh       	=	0.0000
-  calib_share_dlocal_all        	=	0.0420
-  calib_share_dlrt_0veh         	=	0.6133
-  calib_share_dlrt_1veh         	=	0.5040
+  calib_share_dlocal_all        	=	0.0422
+  calib_share_dlrt_0veh         	=	0.6013
+  calib_share_dlrt_1veh         	=	0.5298
   calib_share_dlrt_2veh         	=	0.0000
-  calib_share_dlrt_3veh         	=	0.1645
-  calib_share_dlrt_all          	=	0.4680
+  calib_share_dlrt_3veh         	=	0.1569
+  calib_share_dlrt_all          	=	0.4683

@@ -95,7 +95,7 @@ def fetch_github(
 def calculate_categorical_shares(
     df,
     category_col,
-    weight_col='LINKED_WEIGHT',
+    weight_col='trip_weight',
     group_cols=['Veh_Cat3p', 'Purp5_text', 'PK_OK'],
     filter_condition=None,
     category_mapping=None,
@@ -349,7 +349,20 @@ df_obs_linked = pd.read_csv(io.StringIO(response.text))
 df_obs_linked
 ```
 
-## Household Travel Survey
+## OBS to ATC Boarding Adjustment Factors
+
+```{python}
+# Read Linked UTA On-Board Survey Data directly from GitHub repo
+response = fetch_github(
+    "https://raw.githubusercontent.com/WFRCAnalytics/DATA-OBS-Prep-For-TDM/refs/heads/main/_output/df_adjustment_factors.csv",
+    mode = "private"
+)
+
+df_adjustment_factors = pd.read_csv(io.StringIO(response.text))
+df_adjustment_factors
+```
+
+## Household Travel Survey: Linked Trips
 
 ```{python}
 # Load Linked Trips data from 2023 Household Travel Survey
@@ -359,6 +372,8 @@ df_hts_linked = client.query(
 
 df_hts_linked
 ```
+
+## Household Travel Survey: Households
 
 ```{python}
 # Load Household data from 2023 Household Travel Survey
@@ -455,22 +470,52 @@ flowchart LR
   class LB,CB,EB,LRT,CRT,BRT,WALK,BIKE leafNode
 ```
 
+# Process OBS Linked data: Apply Adjustment Factors
 
-# Identify Variable of Interest
-
-## On-Board Survey
+## Pivot Adjustment Factors
 
 ```{python}
-#| eval: false
+df_adjustment_factors_pivot = (
+    df_adjustment_factors
+    .query('AM != 0 | MD != 0 | PM != 0 | EV != 0')
+    .melt(
+        id_vars='Mode2_Model',
+        value_vars=['AM', 'MD', 'PM', 'EV'],
+        var_name='Period',
+        value_name='Adj_Factor'
+    )
+    .query('Adj_Factor != 0')
+    .reset_index(drop=True)
+)
 
-df_obs_linked[[
-    "Linked_Mode_txt", # Linked Mode: MT = MicroTransit (dont need), LCL = local bus, COR = Core Bus, EXP = Express Bus, LRT = Light Rail Transit (TRAX), CRT = Commuter Rail Transit (FrontRunner), BRT = Bus Rapid Transit (OVX, UVX)
-    "Purp5_text", # Trip Purpose: HBW = Home-based Work, HBO = Home-based Other, HBC = Home-based College, NHB = Non-home based, HBSch = Home-based School
-    "PK_OK", # Peak vs OffPeak
-    "Veh_Cat3p", # Vehicle Ownership: 0 = 0 Vehicle Household, 1 = 1 Vehicle Household, 2 = 2 Vehicle Household, 3 = 3+ Vehicle Household
-    "Mode_Fin", # Current Mode: 1 = MT = MicroTransit (Dont need),  4 = LCL = local bus, 5 = COR = Core Bus, 6 = EXP = Express Bus, 7 = LRT = Light Rail Transit (TRAX), 8 = CRT = Commuter Rail Transit, 9 = BRT = Bus Rapid Transit (OVX, UVX)
-    "Ac_Mode_Model", # Access Mode to Transit: Walk (Walk to Transit), Drive (Drive to Transit)
-]]
+df_adjustment_factors_pivot
+```
+
+## Join Adjustment Factor by Transit Mode and Period
+
+```{python}
+# Step 1: Add Adj_Factor column
+df_obs_linked['Adj_Factor'] = (
+    df_obs_linked
+    .merge(
+        df_adjustment_factors_pivot,
+        left_on=['Linked_Mode_txt', 'Period'],
+        right_on=['Mode2_Model', 'Period'],
+        how='left'
+    )
+    ['Adj_Factor']
+)
+```
+
+## Calculate New Trip Weights
+
+```{python}
+# Step 2: Calculate trip_weight
+df_obs_linked['trip_weight'] = (
+    df_obs_linked['Adj_Factor'].fillna(1) * df_obs_linked['LINKED_WEIGHT']
+)
+
+df_obs_linked[["LINKED_WEIGHT", "Adj_Factor", "trip_weight"]]
 ```
 
 # Process HTS to get needed vars
@@ -568,7 +613,7 @@ hts_by_access
 
 ```{python}
 if 'Ac_Mode2_Model' in obs_transit.columns:
-    obs_by_access = obs_transit.groupby('Ac_Mode2_Model')['LINKED_WEIGHT'].sum().sort_index()
+    obs_by_access = obs_transit.groupby('Ac_Mode2_Model')['trip_weight'].sum().sort_index()
 
 obs_by_access
 ```
@@ -581,7 +626,7 @@ hts_by_purpose
 ```
 
 ```{python}
-obs_by_purpose = obs_transit.groupby('Purp5_text')['LINKED_WEIGHT'].sum().sort_index()
+obs_by_purpose = obs_transit.groupby('Purp5_text')['trip_weight'].sum().sort_index()
 obs_by_purpose
 ```
 
@@ -593,7 +638,7 @@ hts_by_veh
 ```
 
 ```{python}
-obs_by_veh = obs_transit.groupby('Veh_Cat3p')['LINKED_WEIGHT'].sum().sort_index()
+obs_by_veh = obs_transit.groupby('Veh_Cat3p')['trip_weight'].sum().sort_index()
 obs_by_veh
 ```
 
@@ -605,7 +650,7 @@ hts_by_period
 ```
 
 ```{python}
-obs_by_period = obs_transit.groupby('PK_OK')['LINKED_WEIGHT'].sum().sort_index()
+obs_by_period = obs_transit.groupby('PK_OK')['trip_weight'].sum().sort_index()
 obs_by_period
 ```
 
@@ -617,7 +662,7 @@ print("3. COMPARISON SUMMARY")
 print("=" * 80)
 
 hts_total = hts_transit['trip_weight'].sum()
-obs_total = obs_transit['LINKED_WEIGHT'].sum()
+obs_total = obs_transit['trip_weight'].sum()
 ratio = obs_total / hts_total if hts_total > 0 else 0
 
 print(f"\nHTS Daily Transit Trips:  {hts_total:>15,.1f}")
@@ -646,7 +691,7 @@ for purpose in sorted(df_hts_linked['Purp5_text'].dropna().unique()):
         obs_val = obs_transit[
             (obs_transit['Purp5_text'] == purpose) &
             (obs_transit['PK_OK'] == period)
-        ]['LINKED_WEIGHT'].sum()
+        ]['trip_weight'].sum()
 
         comparison_data.append({
             'Purpose': purpose,
@@ -692,9 +737,9 @@ df_hts_auto
 # Transit trips from OBS
 df_obs_transit = (
     df_obs_linked[df_obs_linked['Linked_Mode_txt'] != 'MT']
-    [['Veh_Cat3p', 'Purp5_text', 'PK_OK', 'Ac_Mode2_Model', 'LINKED_WEIGHT']]
+    [['Veh_Cat3p', 'Purp5_text', 'PK_OK', 'Ac_Mode2_Model', 'trip_weight']]
     .assign(mode=lambda x: x['Ac_Mode2_Model'].map({'Walk': 'walk-to-transit', 'Drive': 'drive-to-transit'}))
-    .rename(columns={'LINKED_WEIGHT': 'weight'})
+    .rename(columns={'trip_weight': 'weight'})
     [['Veh_Cat3p', 'Purp5_text', 'PK_OK', 'mode', 'weight']]
 )
 
@@ -875,7 +920,7 @@ service_mapping = {
 df_transit_by_service = calculate_categorical_shares(
     df_obs_linked,
     category_col='Linked_Mode_txt',
-    weight_col='LINKED_WEIGHT',
+    weight_col='trip_weight',
     group_cols=['Veh_Cat3p', 'Purp5_text', 'PK_OK'],
     filter_condition='Linked_Mode_txt != "MT"',
     category_mapping=service_mapping,
@@ -905,7 +950,7 @@ access_mapping = {
 df_transit_by_access = calculate_categorical_shares(
     df_obs_linked,
     category_col='Ac_Mode2_Model',
-    weight_col='LINKED_WEIGHT',
+    weight_col='trip_weight',
     group_cols=['Veh_Cat3p', 'Purp5_text', 'PK_OK'],
     filter_condition='Linked_Mode_txt != "MT"',
     category_mapping=access_mapping,
@@ -938,7 +983,7 @@ walk_service_mapping = {
 df_walk_to_transit = calculate_categorical_shares(
     df_obs_linked,
     category_col='Linked_Mode_txt',
-    weight_col='LINKED_WEIGHT',
+    weight_col='trip_weight',
     group_cols=['Veh_Cat3p', 'Purp5_text', 'PK_OK'],
     filter_condition='Ac_Mode2_Model == "Walk" & Linked_Mode_txt != "MT"',
     category_mapping=walk_service_mapping,
@@ -954,7 +999,6 @@ verify_shares(df_walk_to_transit)
 ```
 
 ##### Drive to Transit
-
 
 ```{python}
 # 9. Drive-to-Transit by Service Type (within drive-to-transit trips)
@@ -973,7 +1017,7 @@ drive_service_mapping = {
 df_drive_to_transit = calculate_categorical_shares(
     df_obs_linked,
     category_col='Linked_Mode_txt',
-    weight_col='LINKED_WEIGHT',
+    weight_col='trip_weight',
     group_cols=['Veh_Cat3p', 'Purp5_text', 'PK_OK'],
     filter_condition='Ac_Mode2_Model == "Drive" & Linked_Mode_txt != "MT"',
     category_mapping=drive_service_mapping,
