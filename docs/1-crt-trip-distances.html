@@ -113,10 +113,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 }</script>
 <script src="https://cdn.jsdelivr.net/npm/requirejs@2.3.6/require.min.js" integrity="sha384-c9c+LnTbwQ3aujuU7ULEPVvgLs+Fn6fJUvIGTsuu1ZcCf11fiEubah0ttpca4ntM sha384-6V1/AdqZRWk1KAlWbKBlGhN7VG4iE/yAZcO6NZPMF8od0vukrvr0tg4qY6NSrItx" crossorigin="anonymous"></script>
 
-
-
 <script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
-
 
 
 </head>
@@ -407,7 +404,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="import-libraries" class="level2" data-number="1.2">
 <h2 data-number="1.2" class="anchored" data-anchor-id="import-libraries"><span class="header-section-number">1.2</span> Import Libraries</h2>
-<div id="3921f854" class="cell" data-execution_count="1">
+<div id="39dad0d2" class="cell" data-execution_count="1">
 <details class="code-fold">
 <summary>Show the code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
@@ -431,7 +428,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="environment-variables" class="level2" data-number="1.3">
 <h2 data-number="1.3" class="anchored" data-anchor-id="environment-variables"><span class="header-section-number">1.3</span> Environment Variables</h2>
-<div id="d1bdcb39" class="cell" data-execution_count="2">
+<div id="f711789e" class="cell" data-execution_count="2">
 <details class="code-fold">
 <summary>Show the code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>PROJECT_CRS <span class="op">=</span> <span class="st">"EPSG:3566"</span>  <span class="co"># NAD83 / Utah North (ftUS)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -440,7 +437,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="helper-functions" class="level2" data-number="1.4">
 <h2 data-number="1.4" class="anchored" data-anchor-id="helper-functions"><span class="header-section-number">1.4</span> Helper Functions</h2>
-<div id="6d5a98b4" class="cell" data-execution_count="3">
+<div id="4aaf6112" class="cell" data-execution_count="3">
 <details class="code-fold">
 <summary>Show the code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> fetch_github(</span>
@@ -493,8 +490,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h1 data-number="2"><span class="header-section-number">2</span> Load Data</h1>
 <section id="processed-on-board-survey-data" class="level2" data-number="2.1">
 <h2 data-number="2.1" class="anchored" data-anchor-id="processed-on-board-survey-data"><span class="header-section-number">2.1</span> Processed On-Board Survey Data</h2>
-<p>This dataset is the output from the <a href="2-access-distance-and-time.qmd">“previous step”</a>, which contains all the calculated access and egress distances and times.</p>
-<div id="049a64fb" class="cell" data-execution_count="4">
+<p>This dataset is the output from the <a href="https://github.com/WFRCAnalytics/DATA-OBS-Prep-For-TDM">“previous step”</a>, which contains all the calculated access and egress distances and times.</p>
+<div id="e322201f" class="cell" data-execution_count="4">
 <details class="code-fold">
 <summary>Show the code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Read Linked UTA On-Board Survey Data directly from GitHub repo</span></span>
@@ -507,12 +504,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>df_obs_linked</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output cell-output-stderr">
-<pre><code>C:\Users\Pukar.Bhandari\AppData\Local\Temp\ipykernel_21860\3078765074.py:7: DtypeWarning:
+<pre><code>C:\Users\Pukar.Bhandari\AppData\Local\Temp\ipykernel_15724\3078765074.py:7: DtypeWarning:
 
 Columns (8,24,32,37,54,132,137,174) have mixed types. Specify dtype option on import or set low_memory=False.
 </code></pre>
 </div>
-<div class="cell-output cell-output-display" data-execution_count="10">
+<div class="cell-output cell-output-display" data-execution_count="14">
 <div>
 
 
@@ -834,7 +831,7 @@ Tip
 <p>Skim matrices were copied from <code>\\ModelAce\ModelAce-E\1 - TDM\1 - Official Release (full run)\v9x\v9.1\v9.1.1\WF-TDM-v9.1.1 - revised-se\Scenarios\OY_2023\4_ModeChoice\1a_Skims</code></p>
 </div>
 </div>
-<div id="fbdef5cb" class="cell" data-execution_count="5">
+<div id="766f50cc" class="cell" data-execution_count="5">
 <details class="code-fold">
 <summary>Show the code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define output files to check</span></span>
@@ -867,7 +864,7 @@ Tip
 </section>
 <section id="read-matrices" class="level2" data-number="2.3">
 <h2 data-number="2.3" class="anchored" data-anchor-id="read-matrices"><span class="header-section-number">2.3</span> Read Matrices</h2>
-<div id="55b244dc" class="cell" data-execution_count="6">
+<div id="15053c36" class="cell" data-execution_count="6">
 <details class="code-fold">
 <summary>Show the code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Read Matrices as DataFrames</span></span>
@@ -883,7 +880,7 @@ Tip
 <h1 data-number="3"><span class="header-section-number">3</span> Process Data</h1>
 <section id="assign-which-matrix-to-process-for-each-row" class="level2" data-number="3.1">
 <h2 data-number="3.1" class="anchored" data-anchor-id="assign-which-matrix-to-process-for-each-row"><span class="header-section-number">3.1</span> Assign which matrix to process for each row</h2>
-<div id="dbe2f5dd" class="cell" data-execution_count="7">
+<div id="759f1e40" class="cell" data-execution_count="7">
 <details class="code-fold">
 <summary>Show the code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a new column called "skim_crt" - only assign when CRT is used</span></span>
@@ -912,7 +909,7 @@ Tip
 <span id="cb10-24"><a href="#cb10-24" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb10-25"><a href="#cb10-25" aria-hidden="true" tabindex="-1"></a>df_obs_linked[<span class="st">'skim_crt'</span>].value_counts().reset_index()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
-<div class="cell-output cell-output-display" data-execution_count="13">
+<div class="cell-output cell-output-display" data-execution_count="17">
 <div>
 
 
@@ -954,7 +951,7 @@ Tip
 </section>
 <section id="calculate-crt-distances" class="level2" data-number="3.2">
 <h2 data-number="3.2" class="anchored" data-anchor-id="calculate-crt-distances"><span class="header-section-number">3.2</span> Calculate CRT Distances</h2>
-<div id="a06ad628" class="cell" data-execution_count="8">
+<div id="c03c9ddf" class="cell" data-execution_count="8">
 <details class="code-fold">
 <summary>Show the code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Calculate CRT Distances - vectorized approach</span></span>
@@ -986,7 +983,7 @@ Tip
 <span id="cb11-27"><a href="#cb11-27" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb11-28"><a href="#cb11-28" aria-hidden="true" tabindex="-1"></a>df_obs_linked[[<span class="st">'dist_CRT'</span>]]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
-<div class="cell-output cell-output-display" data-execution_count="14">
+<div class="cell-output cell-output-display" data-execution_count="18">
 <div>
 
 
@@ -1049,12 +1046,12 @@ Tip
 </div>
 </div>
 </div>
-<div id="b51bfbeb" class="cell" data-execution_count="9">
+<div id="4b68cc2b" class="cell" data-execution_count="9">
 <details class="code-fold">
 <summary>Show the code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>df_obs_linked[<span class="st">'dist_CRT'</span>].replace(<span class="dv">0</span>, np.nan).dropna().sort_values()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
-<div class="cell-output cell-output-display" data-execution_count="15">
+<div class="cell-output cell-output-display" data-execution_count="19">
 <pre><code>11934     2.55
 7651      4.32
 2326      4.32
@@ -1069,47 +1066,58 @@ Tip
 Name: dist_CRT, Length: 1911, dtype: float64</code></pre>
 </div>
 </div>
-<div id="5b7a8688" class="cell" data-execution_count="10">
+<div id="c23d2d4c" class="cell" data-execution_count="10">
 <details class="code-fold">
 <summary>Show the code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Set seaborn style</span></span>
 <span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>sns.set_style(<span class="st">"whitegrid"</span>)</span>
 <span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>sns.set_context(<span class="st">"notebook"</span>, font_scale<span class="op">=</span><span class="fl">1.1</span>)</span>
 <span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>plt.figure(figsize<span class="op">=</span>(<span class="dv">12</span>, <span class="dv">6</span>))</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>plt.figure(figsize<span class="op">=</span>(<span class="dv">10</span>, <span class="dv">6</span>))</span>
 <span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Create histogram with KDE</span></span>
-<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>ax <span class="op">=</span> sns.histplot(</span>
-<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>df_obs_linked[</span>
-<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>        (df_obs_linked[<span class="st">'dist_CRT'</span>].notna()) <span class="op">&amp;</span> <span class="co"># filter out NaNs and</span></span>
-<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>        (df_obs_linked[<span class="st">'dist_CRT'</span>] <span class="op">&gt;</span> <span class="dv">0</span>) <span class="co"># only valid distances</span></span>
-<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>    ],</span>
-<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a>    x<span class="op">=</span><span class="st">'dist_CRT'</span>,</span>
-<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a>    weights<span class="op">=</span><span class="st">"trip_weight"</span>,</span>
-<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a>    bins<span class="op">=</span><span class="bu">range</span>(<span class="dv">0</span>, <span class="bu">int</span>(df_obs_linked[<span class="st">'dist_CRT'</span>].<span class="bu">max</span>()) <span class="op">+</span> <span class="dv">10</span>, <span class="dv">10</span>),</span>
-<span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a>    kde<span class="op">=</span><span class="va">True</span>,</span>
-<span id="cb14-17"><a href="#cb14-17" aria-hidden="true" tabindex="-1"></a>    color<span class="op">=</span><span class="st">'steelblue'</span>,</span>
-<span id="cb14-18"><a href="#cb14-18" aria-hidden="true" tabindex="-1"></a>    edgecolor<span class="op">=</span><span class="st">'white'</span>,</span>
-<span id="cb14-19"><a href="#cb14-19" aria-hidden="true" tabindex="-1"></a>    linewidth<span class="op">=</span><span class="fl">0.5</span>,</span>
-<span id="cb14-20"><a href="#cb14-20" aria-hidden="true" tabindex="-1"></a>    alpha<span class="op">=</span><span class="fl">0.7</span></span>
-<span id="cb14-21"><a href="#cb14-21" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb14-22"><a href="#cb14-22" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-23"><a href="#cb14-23" aria-hidden="true" tabindex="-1"></a><span class="co"># Add grid for better readability</span></span>
-<span id="cb14-24"><a href="#cb14-24" aria-hidden="true" tabindex="-1"></a>plt.grid(axis<span class="op">=</span><span class="st">'y'</span>, alpha<span class="op">=</span><span class="fl">0.3</span>, linestyle<span class="op">=</span><span class="st">'--'</span>)</span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Filter relevant data</span></span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>df_valid <span class="op">=</span> df_obs_linked[</span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>    (df_obs_linked[<span class="st">'dist_CRT'</span>].notna()) <span class="op">&amp;</span> <span class="co"># filter out NaNs and</span></span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>    (df_obs_linked[<span class="st">'dist_CRT'</span>] <span class="op">&gt;</span> <span class="dv">0</span>) <span class="co"># only non-zero distances</span></span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>]</span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Create histogram with KDE</span></span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a>ax <span class="op">=</span> sns.histplot(</span>
+<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>df_valid,</span>
+<span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a>    x<span class="op">=</span><span class="st">'dist_CRT'</span>,</span>
+<span id="cb14-17"><a href="#cb14-17" aria-hidden="true" tabindex="-1"></a>    weights<span class="op">=</span><span class="st">"trip_weight"</span>,</span>
+<span id="cb14-18"><a href="#cb14-18" aria-hidden="true" tabindex="-1"></a>    bins<span class="op">=</span>(<span class="kw">lambda</span> x: <span class="bu">range</span>(<span class="dv">0</span>, <span class="bu">int</span>(df_valid[<span class="st">'dist_CRT'</span>].<span class="bu">max</span>()) <span class="op">+</span> x, x))(<span class="dv">5</span>),</span>
+<span id="cb14-19"><a href="#cb14-19" aria-hidden="true" tabindex="-1"></a>    kde<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb14-20"><a href="#cb14-20" aria-hidden="true" tabindex="-1"></a>    color<span class="op">=</span><span class="st">'steelblue'</span>,</span>
+<span id="cb14-21"><a href="#cb14-21" aria-hidden="true" tabindex="-1"></a>    edgecolor<span class="op">=</span><span class="st">'white'</span>,</span>
+<span id="cb14-22"><a href="#cb14-22" aria-hidden="true" tabindex="-1"></a>    linewidth<span class="op">=</span><span class="fl">0.5</span>,</span>
+<span id="cb14-23"><a href="#cb14-23" aria-hidden="true" tabindex="-1"></a>    alpha<span class="op">=</span><span class="fl">0.7</span></span>
+<span id="cb14-24"><a href="#cb14-24" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb14-25"><a href="#cb14-25" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-26"><a href="#cb14-26" aria-hidden="true" tabindex="-1"></a><span class="co"># Customize</span></span>
-<span id="cb14-27"><a href="#cb14-27" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'Distribution of CRT Travel Distances'</span>, fontsize<span class="op">=</span><span class="dv">16</span>, fontweight<span class="op">=</span><span class="st">'bold'</span>, pad<span class="op">=</span><span class="dv">20</span>)</span>
-<span id="cb14-28"><a href="#cb14-28" aria-hidden="true" tabindex="-1"></a>plt.xlabel(<span class="st">'Distance (miles)'</span>, fontsize<span class="op">=</span><span class="dv">12</span>)</span>
-<span id="cb14-29"><a href="#cb14-29" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">'Frequency'</span>, fontsize<span class="op">=</span><span class="dv">12</span>)</span>
+<span id="cb14-26"><a href="#cb14-26" aria-hidden="true" tabindex="-1"></a><span class="co"># Add 95th percentile line using sorted cumulative weights</span></span>
+<span id="cb14-27"><a href="#cb14-27" aria-hidden="true" tabindex="-1"></a>df_sorted <span class="op">=</span> df_valid.sort_values(<span class="st">'dist_CRT'</span>)</span>
+<span id="cb14-28"><a href="#cb14-28" aria-hidden="true" tabindex="-1"></a>cumsum <span class="op">=</span> df_sorted[<span class="st">'trip_weight'</span>].cumsum()</span>
+<span id="cb14-29"><a href="#cb14-29" aria-hidden="true" tabindex="-1"></a>pct95 <span class="op">=</span> df_sorted.loc[cumsum <span class="op">&gt;=</span> cumsum.iloc[<span class="op">-</span><span class="dv">1</span>] <span class="op">*</span> <span class="fl">0.95</span>, <span class="st">'dist_CRT'</span>].iloc[<span class="dv">0</span>]</span>
 <span id="cb14-30"><a href="#cb14-30" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-31"><a href="#cb14-31" aria-hidden="true" tabindex="-1"></a>sns.despine()</span>
-<span id="cb14-32"><a href="#cb14-32" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
-<span id="cb14-33"><a href="#cb14-33" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb14-31"><a href="#cb14-31" aria-hidden="true" tabindex="-1"></a>plt.axvline(pct95, color<span class="op">=</span><span class="st">'red'</span>, linestyle<span class="op">=</span><span class="st">'--'</span>, linewidth<span class="op">=</span><span class="dv">2</span>, label<span class="op">=</span><span class="ss">f'95th percentile: </span><span class="sc">{</span>pct95<span class="sc">:.1f}</span><span class="ss"> mi'</span>)</span>
+<span id="cb14-32"><a href="#cb14-32" aria-hidden="true" tabindex="-1"></a>plt.legend()</span>
+<span id="cb14-33"><a href="#cb14-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-34"><a href="#cb14-34" aria-hidden="true" tabindex="-1"></a><span class="co"># Add grid for better readability</span></span>
+<span id="cb14-35"><a href="#cb14-35" aria-hidden="true" tabindex="-1"></a>plt.grid(axis<span class="op">=</span><span class="st">'y'</span>, alpha<span class="op">=</span><span class="fl">0.3</span>, linestyle<span class="op">=</span><span class="st">'--'</span>)</span>
+<span id="cb14-36"><a href="#cb14-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-37"><a href="#cb14-37" aria-hidden="true" tabindex="-1"></a><span class="co"># Customize</span></span>
+<span id="cb14-38"><a href="#cb14-38" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'Distribution of CRT Travel Distances'</span>, fontsize<span class="op">=</span><span class="dv">16</span>, fontweight<span class="op">=</span><span class="st">'bold'</span>, pad<span class="op">=</span><span class="dv">20</span>)</span>
+<span id="cb14-39"><a href="#cb14-39" aria-hidden="true" tabindex="-1"></a>plt.xlabel(<span class="st">'Distance (miles)'</span>, fontsize<span class="op">=</span><span class="dv">12</span>)</span>
+<span id="cb14-40"><a href="#cb14-40" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">'Frequency'</span>, fontsize<span class="op">=</span><span class="dv">12</span>)</span>
+<span id="cb14-41"><a href="#cb14-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-42"><a href="#cb14-42" aria-hidden="true" tabindex="-1"></a>sns.despine()</span>
+<span id="cb14-43"><a href="#cb14-43" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb14-44"><a href="#cb14-44" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="1-crt-trip-distances_files/figure-html/cell-11-output-1.png" width="1132" height="557" class="figure-img"></p>
+<p><img src="1-crt-trip-distances_files/figure-html/cell-11-output-1.png" width="940" height="557" class="figure-img"></p>
 </figure>
 </div>
 </div>
@@ -1687,7 +1695,7 @@ Name: dist_CRT, Length: 1911, dtype: float64</code></pre>
 <span id="cb15-105"><a href="#cb15-105" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb15-106"><a href="#cb15-106" aria-hidden="true" tabindex="-1"></a><span class="fu">## Processed On-Board Survey Data</span></span>
 <span id="cb15-107"><a href="#cb15-107" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-108"><a href="#cb15-108" aria-hidden="true" tabindex="-1"></a>This dataset is the output from the <span class="co">[</span><span class="ot">"previous step"</span><span class="co">](2-access-distance-and-time.qmd)</span>, which contains all the calculated access and egress distances and times.</span>
+<span id="cb15-108"><a href="#cb15-108" aria-hidden="true" tabindex="-1"></a>This dataset is the output from the <span class="co">[</span><span class="ot">"previous step"</span><span class="co">](https://github.com/WFRCAnalytics/DATA-OBS-Prep-For-TDM)</span>, which contains all the calculated access and egress distances and times.</span>
 <span id="cb15-109"><a href="#cb15-109" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb15-112"><a href="#cb15-112" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
 <span id="cb15-113"><a href="#cb15-113" aria-hidden="true" tabindex="-1"></a><span class="co"># Read Linked UTA On-Board Survey Data directly from GitHub repo</span></span>
@@ -1818,36 +1826,47 @@ Name: dist_CRT, Length: 1911, dtype: float64</code></pre>
 <span id="cb15-250"><a href="#cb15-250" aria-hidden="true" tabindex="-1"></a>sns.set_style(<span class="st">"whitegrid"</span>)</span>
 <span id="cb15-251"><a href="#cb15-251" aria-hidden="true" tabindex="-1"></a>sns.set_context(<span class="st">"notebook"</span>, font_scale<span class="op">=</span><span class="fl">1.1</span>)</span>
 <span id="cb15-252"><a href="#cb15-252" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-253"><a href="#cb15-253" aria-hidden="true" tabindex="-1"></a>plt.figure(figsize<span class="op">=</span>(<span class="dv">12</span>, <span class="dv">6</span>))</span>
+<span id="cb15-253"><a href="#cb15-253" aria-hidden="true" tabindex="-1"></a>plt.figure(figsize<span class="op">=</span>(<span class="dv">10</span>, <span class="dv">6</span>))</span>
 <span id="cb15-254"><a href="#cb15-254" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-255"><a href="#cb15-255" aria-hidden="true" tabindex="-1"></a><span class="co"># Create histogram with KDE</span></span>
-<span id="cb15-256"><a href="#cb15-256" aria-hidden="true" tabindex="-1"></a>ax <span class="op">=</span> sns.histplot(</span>
-<span id="cb15-257"><a href="#cb15-257" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>df_obs_linked[</span>
-<span id="cb15-258"><a href="#cb15-258" aria-hidden="true" tabindex="-1"></a>        (df_obs_linked[<span class="st">'dist_CRT'</span>].notna()) <span class="op">&amp;</span> <span class="co"># filter out NaNs and</span></span>
-<span id="cb15-259"><a href="#cb15-259" aria-hidden="true" tabindex="-1"></a>        (df_obs_linked[<span class="st">'dist_CRT'</span>] <span class="op">&gt;</span> <span class="dv">0</span>) <span class="co"># only valid distances</span></span>
-<span id="cb15-260"><a href="#cb15-260" aria-hidden="true" tabindex="-1"></a>    ],</span>
-<span id="cb15-261"><a href="#cb15-261" aria-hidden="true" tabindex="-1"></a>    x<span class="op">=</span><span class="st">'dist_CRT'</span>,</span>
-<span id="cb15-262"><a href="#cb15-262" aria-hidden="true" tabindex="-1"></a>    weights<span class="op">=</span><span class="st">"trip_weight"</span>,</span>
-<span id="cb15-263"><a href="#cb15-263" aria-hidden="true" tabindex="-1"></a>    bins<span class="op">=</span><span class="bu">range</span>(<span class="dv">0</span>, <span class="bu">int</span>(df_obs_linked[<span class="st">'dist_CRT'</span>].<span class="bu">max</span>()) <span class="op">+</span> <span class="dv">10</span>, <span class="dv">10</span>),</span>
-<span id="cb15-264"><a href="#cb15-264" aria-hidden="true" tabindex="-1"></a>    kde<span class="op">=</span><span class="va">True</span>,</span>
-<span id="cb15-265"><a href="#cb15-265" aria-hidden="true" tabindex="-1"></a>    color<span class="op">=</span><span class="st">'steelblue'</span>,</span>
-<span id="cb15-266"><a href="#cb15-266" aria-hidden="true" tabindex="-1"></a>    edgecolor<span class="op">=</span><span class="st">'white'</span>,</span>
-<span id="cb15-267"><a href="#cb15-267" aria-hidden="true" tabindex="-1"></a>    linewidth<span class="op">=</span><span class="fl">0.5</span>,</span>
-<span id="cb15-268"><a href="#cb15-268" aria-hidden="true" tabindex="-1"></a>    alpha<span class="op">=</span><span class="fl">0.7</span></span>
-<span id="cb15-269"><a href="#cb15-269" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb15-270"><a href="#cb15-270" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-271"><a href="#cb15-271" aria-hidden="true" tabindex="-1"></a><span class="co"># Add grid for better readability</span></span>
-<span id="cb15-272"><a href="#cb15-272" aria-hidden="true" tabindex="-1"></a>plt.grid(axis<span class="op">=</span><span class="st">'y'</span>, alpha<span class="op">=</span><span class="fl">0.3</span>, linestyle<span class="op">=</span><span class="st">'--'</span>)</span>
+<span id="cb15-255"><a href="#cb15-255" aria-hidden="true" tabindex="-1"></a><span class="co"># Filter relevant data</span></span>
+<span id="cb15-256"><a href="#cb15-256" aria-hidden="true" tabindex="-1"></a>df_valid <span class="op">=</span> df_obs_linked[</span>
+<span id="cb15-257"><a href="#cb15-257" aria-hidden="true" tabindex="-1"></a>    (df_obs_linked[<span class="st">'dist_CRT'</span>].notna()) <span class="op">&amp;</span> <span class="co"># filter out NaNs and</span></span>
+<span id="cb15-258"><a href="#cb15-258" aria-hidden="true" tabindex="-1"></a>    (df_obs_linked[<span class="st">'dist_CRT'</span>] <span class="op">&gt;</span> <span class="dv">0</span>) <span class="co"># only non-zero distances</span></span>
+<span id="cb15-259"><a href="#cb15-259" aria-hidden="true" tabindex="-1"></a>]</span>
+<span id="cb15-260"><a href="#cb15-260" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-261"><a href="#cb15-261" aria-hidden="true" tabindex="-1"></a><span class="co"># Create histogram with KDE</span></span>
+<span id="cb15-262"><a href="#cb15-262" aria-hidden="true" tabindex="-1"></a>ax <span class="op">=</span> sns.histplot(</span>
+<span id="cb15-263"><a href="#cb15-263" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>df_valid,</span>
+<span id="cb15-264"><a href="#cb15-264" aria-hidden="true" tabindex="-1"></a>    x<span class="op">=</span><span class="st">'dist_CRT'</span>,</span>
+<span id="cb15-265"><a href="#cb15-265" aria-hidden="true" tabindex="-1"></a>    weights<span class="op">=</span><span class="st">"trip_weight"</span>,</span>
+<span id="cb15-266"><a href="#cb15-266" aria-hidden="true" tabindex="-1"></a>    bins<span class="op">=</span>(<span class="kw">lambda</span> x: <span class="bu">range</span>(<span class="dv">0</span>, <span class="bu">int</span>(df_valid[<span class="st">'dist_CRT'</span>].<span class="bu">max</span>()) <span class="op">+</span> x, x))(<span class="dv">5</span>),</span>
+<span id="cb15-267"><a href="#cb15-267" aria-hidden="true" tabindex="-1"></a>    kde<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb15-268"><a href="#cb15-268" aria-hidden="true" tabindex="-1"></a>    color<span class="op">=</span><span class="st">'steelblue'</span>,</span>
+<span id="cb15-269"><a href="#cb15-269" aria-hidden="true" tabindex="-1"></a>    edgecolor<span class="op">=</span><span class="st">'white'</span>,</span>
+<span id="cb15-270"><a href="#cb15-270" aria-hidden="true" tabindex="-1"></a>    linewidth<span class="op">=</span><span class="fl">0.5</span>,</span>
+<span id="cb15-271"><a href="#cb15-271" aria-hidden="true" tabindex="-1"></a>    alpha<span class="op">=</span><span class="fl">0.7</span></span>
+<span id="cb15-272"><a href="#cb15-272" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb15-273"><a href="#cb15-273" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-274"><a href="#cb15-274" aria-hidden="true" tabindex="-1"></a><span class="co"># Customize</span></span>
-<span id="cb15-275"><a href="#cb15-275" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'Distribution of CRT Travel Distances'</span>, fontsize<span class="op">=</span><span class="dv">16</span>, fontweight<span class="op">=</span><span class="st">'bold'</span>, pad<span class="op">=</span><span class="dv">20</span>)</span>
-<span id="cb15-276"><a href="#cb15-276" aria-hidden="true" tabindex="-1"></a>plt.xlabel(<span class="st">'Distance (miles)'</span>, fontsize<span class="op">=</span><span class="dv">12</span>)</span>
-<span id="cb15-277"><a href="#cb15-277" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">'Frequency'</span>, fontsize<span class="op">=</span><span class="dv">12</span>)</span>
+<span id="cb15-274"><a href="#cb15-274" aria-hidden="true" tabindex="-1"></a><span class="co"># Add 95th percentile line using sorted cumulative weights</span></span>
+<span id="cb15-275"><a href="#cb15-275" aria-hidden="true" tabindex="-1"></a>df_sorted <span class="op">=</span> df_valid.sort_values(<span class="st">'dist_CRT'</span>)</span>
+<span id="cb15-276"><a href="#cb15-276" aria-hidden="true" tabindex="-1"></a>cumsum <span class="op">=</span> df_sorted[<span class="st">'trip_weight'</span>].cumsum()</span>
+<span id="cb15-277"><a href="#cb15-277" aria-hidden="true" tabindex="-1"></a>pct95 <span class="op">=</span> df_sorted.loc[cumsum <span class="op">&gt;=</span> cumsum.iloc[<span class="op">-</span><span class="dv">1</span>] <span class="op">*</span> <span class="fl">0.95</span>, <span class="st">'dist_CRT'</span>].iloc[<span class="dv">0</span>]</span>
 <span id="cb15-278"><a href="#cb15-278" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-279"><a href="#cb15-279" aria-hidden="true" tabindex="-1"></a>sns.despine()</span>
-<span id="cb15-280"><a href="#cb15-280" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
-<span id="cb15-281"><a href="#cb15-281" aria-hidden="true" tabindex="-1"></a>plt.show()</span>
-<span id="cb15-282"><a href="#cb15-282" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb15-279"><a href="#cb15-279" aria-hidden="true" tabindex="-1"></a>plt.axvline(pct95, color<span class="op">=</span><span class="st">'red'</span>, linestyle<span class="op">=</span><span class="st">'--'</span>, linewidth<span class="op">=</span><span class="dv">2</span>, label<span class="op">=</span><span class="ss">f'95th percentile: </span><span class="sc">{</span>pct95<span class="sc">:.1f}</span><span class="ss"> mi'</span>)</span>
+<span id="cb15-280"><a href="#cb15-280" aria-hidden="true" tabindex="-1"></a>plt.legend()</span>
+<span id="cb15-281"><a href="#cb15-281" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-282"><a href="#cb15-282" aria-hidden="true" tabindex="-1"></a><span class="co"># Add grid for better readability</span></span>
+<span id="cb15-283"><a href="#cb15-283" aria-hidden="true" tabindex="-1"></a>plt.grid(axis<span class="op">=</span><span class="st">'y'</span>, alpha<span class="op">=</span><span class="fl">0.3</span>, linestyle<span class="op">=</span><span class="st">'--'</span>)</span>
+<span id="cb15-284"><a href="#cb15-284" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-285"><a href="#cb15-285" aria-hidden="true" tabindex="-1"></a><span class="co"># Customize</span></span>
+<span id="cb15-286"><a href="#cb15-286" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'Distribution of CRT Travel Distances'</span>, fontsize<span class="op">=</span><span class="dv">16</span>, fontweight<span class="op">=</span><span class="st">'bold'</span>, pad<span class="op">=</span><span class="dv">20</span>)</span>
+<span id="cb15-287"><a href="#cb15-287" aria-hidden="true" tabindex="-1"></a>plt.xlabel(<span class="st">'Distance (miles)'</span>, fontsize<span class="op">=</span><span class="dv">12</span>)</span>
+<span id="cb15-288"><a href="#cb15-288" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">'Frequency'</span>, fontsize<span class="op">=</span><span class="dv">12</span>)</span>
+<span id="cb15-289"><a href="#cb15-289" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-290"><a href="#cb15-290" aria-hidden="true" tabindex="-1"></a>sns.despine()</span>
+<span id="cb15-291"><a href="#cb15-291" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb15-292"><a href="#cb15-292" aria-hidden="true" tabindex="-1"></a>plt.show()</span>
+<span id="cb15-293"><a href="#cb15-293" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 </code></pre></div><button title="Copy to Clipboard" class="code-copy-button" data-in-quarto-modal=""><i class="bi"></i></button></div>
 </div></div></div></div></div>
 </div> <!-- /content -->

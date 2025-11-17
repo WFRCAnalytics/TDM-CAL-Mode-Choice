@@ -99,7 +99,7 @@ def fetch_github(
 
 ## Processed On-Board Survey Data
 
-This dataset is the output from the ["previous step"](2-access-distance-and-time.qmd), which contains all the calculated access and egress distances and times.
+This dataset is the output from the ["previous step"](https://github.com/WFRCAnalytics/DATA-OBS-Prep-For-TDM), which contains all the calculated access and egress distances and times.
 
 ```{python}
 # Read Linked UTA On-Board Survey Data directly from GitHub repo
@@ -230,23 +230,34 @@ df_obs_linked['dist_CRT'].replace(0, np.nan).dropna().sort_values()
 sns.set_style("whitegrid")
 sns.set_context("notebook", font_scale=1.1)
 
-plt.figure(figsize=(12, 6))
+plt.figure(figsize=(10, 6))
+
+# Filter relevant data
+df_valid = df_obs_linked[
+    (df_obs_linked['dist_CRT'].notna()) & # filter out NaNs and
+    (df_obs_linked['dist_CRT'] > 0) # only non-zero distances
+]
 
 # Create histogram with KDE
 ax = sns.histplot(
-    data=df_obs_linked[
-        (df_obs_linked['dist_CRT'].notna()) & # filter out NaNs and
-        (df_obs_linked['dist_CRT'] > 0) # only valid distances
-    ],
+    data=df_valid,
     x='dist_CRT',
     weights="trip_weight",
-    bins=range(0, int(df_obs_linked['dist_CRT'].max()) + 10, 10),
+    bins=(lambda x: range(0, int(df_valid['dist_CRT'].max()) + x, x))(5),
     kde=True,
     color='steelblue',
     edgecolor='white',
     linewidth=0.5,
     alpha=0.7
 )
+
+# Add 95th percentile line using sorted cumulative weights
+df_sorted = df_valid.sort_values('dist_CRT')
+cumsum = df_sorted['trip_weight'].cumsum()
+pct95 = df_sorted.loc[cumsum >= cumsum.iloc[-1] * 0.95, 'dist_CRT'].iloc[0]
+
+plt.axvline(pct95, color='red', linestyle='--', linewidth=2, label=f'95th percentile: {pct95:.1f} mi')
+plt.legend()
 
 # Add grid for better readability
 plt.grid(axis='y', alpha=0.3, linestyle='--')
