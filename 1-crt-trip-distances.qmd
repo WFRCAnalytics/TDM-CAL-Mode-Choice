@@ -1,0 +1,262 @@
+---
+title: Explore Distribution of CRT Travel Distances
+subtitle: Using UTA On-Board Survey Data and Skim Matrices
+description: Lorem Ipsum
+author:
+ - name: Pukar Bhandari
+   email: pukar.bhandari@wfrc.utah.gov
+   affiliation:
+     - name: Wasatch Front Regional Council
+       url: "https://wfrc.utah.gov/"
+date: "2025-11-14"
+---
+
+# Setup Environment
+
+This section establishes the Python environment with all required libraries for geospatial analysis and data processing. Beyond standard data manipulation tools, we'll need geopandas for spatial operations and regular expressions for parsing the non-transit links file. The helper functions defined here will be used throughout the analysis for spatial matching and file parsing.
+
+## Install Libraries
+
+```python
+!conda install -c conda-forge numpy pandas geopandas matplotlib seaborn shapely requests pathlib
+```
+
+## Import Libraries
+
+```{python}
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+from matplotlib.ticker import FuncFormatter
+import seaborn as sns
+import geopandas as gpd
+from pathlib import Path
+import glob
+import re
+import os
+import requests
+import io
+
+import openmatrix as omx
+import subprocess
+```
+
+## Environment Variables
+
+```{python}
+PROJECT_CRS = "EPSG:3566"  # NAD83 / Utah North (ftUS)
+```
+
+## Helper Functions
+
+```{python}
+def fetch_github(
+    url: str,
+    mode: str = "private",
+    token_env_var: str = "GITHUB_TOKEN"
+) -> requests.Response:
+    """
+    Fetch content from GitHub repositories.
+
+    Args:
+        url: GitHub raw URL (e.g., https://raw.githubusercontent.com/...)
+        mode: "public" for public repos, "private" for private repos requiring authentication
+        token_env_var: Name of environment variable containing GitHub token (default: GITHUB_TOKEN)
+
+    Returns:
+        requests.Response object
+
+    Raises:
+        ValueError: If token is missing for private mode or invalid mode
+        requests.HTTPError: If request fails
+    """
+    # Validate mode
+    if mode not in ["public", "private"]:
+        raise ValueError(f"mode must be 'public' or 'private', got '{mode}'")
+
+    if mode == "public":
+        response = requests.get(url, timeout=30)
+    else:
+        token = os.getenv(token_env_var)
+        if not token:
+            raise ValueError(
+                f"GitHub token not found in environment variable '{token_env_var}'. "
+                f"Check your .env file has: {token_env_var}=your_token_here"
+            )
+
+        headers = {
+            'Authorization': f'token {token}',
+            'Accept': 'application/vnd.github.v3.raw'
+        }
+        response = requests.get(url, headers=headers, timeout=30)
+
+    response.raise_for_status()
+    return response
+```
+
+# Load Data
+
+## Processed On-Board Survey Data
+
+This dataset is the output from the ["previous step"](2-access-distance-and-time.qmd), which contains all the calculated access and egress distances and times.
+
+```{python}
+# Read Linked UTA On-Board Survey Data directly from GitHub repo
+response = fetch_github(
+    "https://raw.githubusercontent.com/WFRCAnalytics/DATA-OBS-Prep-For-TDM/refs/heads/main/_output/UTA_OBS_2024_Linked_FactorAdjusted.csv",
+    mode = "private"
+)
+
+df_obs_linked = pd.read_csv(io.StringIO(response.text))
+df_obs_linked
+```
+
+## Transit Trip Matrix
+
+### Convert Matrix Format using `_ConvertMatToOmx.s`.
+
+This only needs to run once.
+
+::: {.callout-tip}
+Skim matrices were copied from `\\ModelAce\ModelAce-E\1 - TDM\1 - Official Release (full run)\v9x\v9.1\v9.1.1\WF-TDM-v9.1.1 - revised-se\Scenarios\OY_2023\4_ModeChoice\1a_Skims`
+:::
+
+```{python}
+# Define output files to check
+output_files = [
+    "_data/Skims/omx/skm_d8_Ok.omx",
+    "_data/Skims/omx/skm_d8_Pk.omx",
+    "_data/Skims/omx/skm_w8_flag_Ok.omx",
+    "_data/Skims/omx/skm_w8_flag_Pk.omx",
+    "_data/Skims/omx/skm_w8_Ok.omx",
+    "_data/Skims/omx/skm_w8_Pk.omx",
+]
+
+# Check if all output files exist
+if not all(Path(f).exists() for f in output_files):
+    print("Converting matrices to OMX format...")
+    subprocess.run(
+        [r"C:\Program Files\Citilabs\CubeVoyager\Voyager.exe",
+         r"_data\_ConvertMatToOmx.s"],
+        check=True
+    )
+    print("Conversion complete!")
+else:
+    print("OMX files already exist, skipping conversion.")
+```
+
+## Read Matrices
+
+```{python}
+# Read Matrices as DataFrames
+omx_w8_pk = pd.DataFrame(omx.open_file(r"_data\Skims\omx\skm_w8_Pk.omx")['D8'])
+omx_w8_ok = pd.DataFrame(omx.open_file(r"_data\Skims\omx\skm_w8_Ok.omx")['D8'])
+omx_d8_pk = pd.DataFrame(omx.open_file(r"_data\Skims\omx\skm_d8_Pk.omx")['D8'])
+omx_d8_ok = pd.DataFrame(omx.open_file(r"_data\Skims\omx\skm_d8_Ok.omx")['D8'])
+```
+
+# Process Data
+
+## Assign which matrix to process for each row
+
+```{python}
+# Create a new column called "skim_crt" - only assign when CRT is used
+df_obs_linked['skim_crt'] = np.select(
+    [
+        (df_obs_linked[['FirstMode', 'SecndMode', 'ThirdMode', 'LastMode']].eq('CRT').any(axis=1)) &
+        (df_obs_linked['Ac_Mode2_Model'] == 'Walk') & (df_obs_linked['Period'].isin(['AM', 'PM'])),
+
+        (df_obs_linked[['FirstMode', 'SecndMode', 'ThirdMode', 'LastMode']].eq('CRT').any(axis=1)) &
+        (df_obs_linked['Ac_Mode2_Model'] == 'Walk') & (df_obs_linked['Period'].isin(['MD', 'EV'])),
+
+        (df_obs_linked[['FirstMode', 'SecndMode', 'ThirdMode', 'LastMode']].eq('CRT').any(axis=1)) &
+        (df_obs_linked['Ac_Mode2_Model'] == 'Drive') & (df_obs_linked['Period'].isin(['AM', 'PM'])),
+
+        (df_obs_linked[['FirstMode', 'SecndMode', 'ThirdMode', 'LastMode']].eq('CRT').any(axis=1)) &
+        (df_obs_linked['Ac_Mode2_Model'] == 'Drive') & (df_obs_linked['Period'].isin(['MD', 'EV']))
+    ],
+    [
+        'omx_w8_pk',
+        'omx_w8_ok',
+        'omx_d8_pk',
+        'omx_d8_ok'
+    ],
+    default=None
+)
+
+df_obs_linked['skim_crt'].value_counts().reset_index()
+```
+
+## Calculate CRT Distances
+
+```{python}
+# Calculate CRT Distances - vectorized approach
+# Filter to only CRT rows with valid TAZIDs
+mask = (
+    df_obs_linked['skim_crt'].notna() &
+    df_obs_linked['p_TAZID'].notna() &
+    df_obs_linked['a_TAZID'].notna()
+)
+
+# Initialize column
+df_obs_linked['dist_CRT'] = np.nan
+
+# Process each matrix type separately (more efficient than row-by-row)
+for matrix_name in ['omx_w8_pk', 'omx_w8_ok', 'omx_d8_pk', 'omx_d8_ok']:
+    # Get rows that need this specific matrix
+    matrix_mask = mask & (df_obs_linked['skim_crt'] == matrix_name)
+
+    if matrix_mask.any():
+        # Get the actual matrix dataframe
+        matrix_df = globals()[matrix_name]
+
+        # Extract distances for all rows at once
+        row_indices = (df_obs_linked.loc[matrix_mask, 'p_TAZID'] - 1).astype(int)
+        col_indices = (df_obs_linked.loc[matrix_mask, 'a_TAZID'] - 1).astype(int)
+
+        # Use numpy's advanced indexing
+        df_obs_linked.loc[matrix_mask, 'dist_CRT'] = matrix_df.values[row_indices, col_indices]
+
+df_obs_linked[['dist_CRT']]
+```
+
+```{python}
+df_obs_linked['dist_CRT'].replace(0, np.nan).dropna().sort_values()
+```
+
+```{python}
+# Set seaborn style
+sns.set_style("whitegrid")
+sns.set_context("notebook", font_scale=1.1)
+
+plt.figure(figsize=(12, 6))
+
+# Create histogram with KDE
+ax = sns.histplot(
+    data=df_obs_linked[
+        (df_obs_linked['dist_CRT'].notna()) & # filter out NaNs and
+        (df_obs_linked['dist_CRT'] > 0) # only valid distances
+    ],
+    x='dist_CRT',
+    weights="trip_weight",
+    bins=range(0, int(df_obs_linked['dist_CRT'].max()) + 10, 10),
+    kde=True,
+    color='steelblue',
+    edgecolor='white',
+    linewidth=0.5,
+    alpha=0.7
+)
+
+# Add grid for better readability
+plt.grid(axis='y', alpha=0.3, linestyle='--')
+
+# Customize
+plt.title('Distribution of CRT Travel Distances', fontsize=16, fontweight='bold', pad=20)
+plt.xlabel('Distance (miles)', fontsize=12)
+plt.ylabel('Frequency', fontsize=12)
+
+sns.despine()
+plt.tight_layout()
+plt.show()
+```

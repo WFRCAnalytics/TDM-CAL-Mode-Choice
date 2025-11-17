@@ -2,3 +2,12 @@
 
 /.quarto/
 **/*.quarto_ipynb
+
+# skip cube files
+*.PRJ
+*.VAR
+*.PRN
+
+# Files > 100 MB
+_data/Skims/*.mtx
+_data/Skims/omx/*.omx

@@ -1,0 +1,1837 @@
+---
+title: Calculating the Mode Choice Calibration Parameters
+subtitle: Using Household Travel Survey and UTA On-Board Survey Data
+description: Lorem Ipsum
+author:
+ - name: Pukar Bhandari
+   email: pukar.bhandari@wfrc.utah.gov
+   affiliation:
+     - name: Wasatch Front Regional Council
+       url: "https://wfrc.utah.gov/"
+date: "2025-11-03"
+---
+
+# Setup Environment
+
+This section prepares the Python environment with all necessary libraries and configurations. We'll import data manipulation libraries (pandas, numpy), and visualization tools (matplotlib, seaborn).
+
+## Install Libraries
+
+```python
+!conda install -c conda-forge numpy pandas matplotlib seaborn requests pathlib BigQuery
+```
+
+## Import Libraries
+
+```{python}
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+import importlib.util
+from pathlib import Path
+import sys
+import os
+import requests
+import io
+
+from dotenv import load_dotenv
+load_dotenv()
+```
+
+## Environment Variables
+
+
+
+## Helper Functions
+
+```{python}
+def fetch_github(
+    url: str,
+    mode: str = "private",
+    token_env_var: str = "GITHUB_TOKEN"
+) -> requests.Response:
+    """
+    Fetch content from GitHub repositories.
+
+    Args:
+        url: GitHub raw URL (e.g., https://raw.githubusercontent.com/...)
+        mode: "public" for public repos, "private" for private repos requiring authentication
+        token_env_var: Name of environment variable containing GitHub token (default: GITHUB_TOKEN)
+
+    Returns:
+        requests.Response object
+
+    Raises:
+        ValueError: If token is missing for private mode or invalid mode
+        requests.HTTPError: If request fails
+    """
+    # Validate mode
+    if mode not in ["public", "private"]:
+        raise ValueError(f"mode must be 'public' or 'private', got '{mode}'")
+
+    if mode == "public":
+        response = requests.get(url, timeout=30)
+    else:
+        token = os.getenv(token_env_var)
+        if not token:
+            raise ValueError(
+                f"GitHub token not found in environment variable '{token_env_var}'. "
+                f"Check your .env file has: {token_env_var}=your_token_here"
+            )
+
+        headers = {
+            'Authorization': f'token {token}',
+            'Accept': 'application/vnd.github.v3.raw'
+        }
+        response = requests.get(url, headers=headers, timeout=30)
+
+    response.raise_for_status()
+    return response
+```
+
+```{python}
+def calculate_categorical_shares(
+    df,
+    category_col,
+    weight_col='trip_weight',
+    group_cols=['Veh_Cat3p', 'Purp5_text', 'PK_OK'],
+    filter_condition=None,
+    category_mapping=None,
+    prefix='share',
+    purpose_by_period=['HBW', 'HBO', 'NHB'],  # Only HBC and HBSch get daily
+    purpose_daily=['HBC', 'HBSch']  # NEW: Purposes that only get daily (no peak/off-peak)
+):
+    """
+    Calculate weighted shares of categories within groups, ensuring they sum to 1.
+
+    Parameters:
+    -----------
+    df : DataFrame
+        Input dataframe
+    category_col : str
+        Column containing the categories to calculate shares for
+    weight_col : str
+        Column containing weights for each observation
+    group_cols : list
+        Columns to group by (e.g., vehicle ownership, purpose, peak/off-peak)
+    filter_condition : str or None
+        Optional pandas query string to filter data before calculation
+    category_mapping : dict or None
+        Optional mapping to rename/recode categories
+    prefix : str
+        Prefix for output column names
+    purpose_by_period : list
+        Purposes that should NOT get daily aggregates
+    purpose_daily : list
+        Purposes that ONLY get daily aggregates (no peak/off-peak breakdown)
+
+    Returns:
+    --------
+    DataFrame with shares in wide format
+    """
+
+    # Apply filter and copy in one step
+    if filter_condition:
+        df_work = df.query(filter_condition).copy()
+    else:
+        df_work = df.copy()
+
+    # Apply category mapping if provided
+    if category_mapping:
+        df_work[category_col] = df_work[category_col].map(category_mapping)
+        # Remove unmapped values
+        df_work = df_work.dropna(subset=[category_col])
+
+    # Remove any NaN values in key columns
+    df_work = df_work.dropna(subset=[category_col, weight_col] + group_cols)
+
+    # Convert Veh_Cat3p to string format for consistency
+    df_work['Veh_Cat3p'] = df_work['Veh_Cat3p'].astype(str)
+    # Map 3 to 3+ for display
+    # df_work['Veh_Cat3p'] = df_work['Veh_Cat3p'].replace('3', '3+')
+
+    # Initialize results dictionary
+    results = {}
+
+    # Calculate weighted shares for each group combination (peak/off-peak)
+    # BUT skip purpose_daily
+    for veh in sorted(df_work['Veh_Cat3p'].unique()):
+        for purpose in sorted(df_work['Purp5_text'].unique()):
+            # Skip peak/off-peak for daily-only purposes
+            if purpose in purpose_daily:
+                continue
+
+            for peak in sorted(df_work['PK_OK'].unique()):
+                subset = df_work.query(
+                    f"Veh_Cat3p == '{veh}' & Purp5_text == '{purpose}' & PK_OK == '{peak}'"
+                )
+
+                if len(subset) > 0:
+                    # Calculate weighted counts by category
+                    weighted_counts = subset.groupby(category_col)[weight_col].sum()
+                    total_weight = subset[weight_col].sum()
+
+                    for cat, weighted_count in weighted_counts.items():
+                        var_name = f"{prefix}_{cat}_{veh}veh"
+                        if var_name not in results:
+                            results[var_name] = {}
+                        results[var_name][(purpose, peak)] = weighted_count / total_weight
+
+    # Calculate "_all" aggregates for peak/off-peak (excluding daily-only purposes)
+    for purpose in sorted(df_work['Purp5_text'].unique()):
+        # Skip peak/off-peak for daily-only purposes
+        if purpose in purpose_daily:
+            continue
+
+        for peak in sorted(df_work['PK_OK'].unique()):
+            subset = df_work.query(f"Purp5_text == '{purpose}' & PK_OK == '{peak}'")
+
+            if len(subset) > 0:
+                weighted_counts = subset.groupby(category_col)[weight_col].sum()
+                total_weight = subset[weight_col].sum()
+
+                for cat, weighted_count in weighted_counts.items():
+                    var_name = f"{prefix}_{cat}_all"
+                    if var_name not in results:
+                        results[var_name] = {}
+                    results[var_name][(purpose, peak)] = weighted_count / total_weight
+
+    # Calculate daily aggregates for specified purposes only
+    daily_purposes = [p for p in df_work['Purp5_text'].unique()
+                     if p not in purpose_by_period]
+
+    for purpose in daily_purposes:
+        subset = df_work.query(f"Purp5_text == '{purpose}'")
+
+        if len(subset) > 0:
+            # For each vehicle category
+            for veh in sorted(df_work['Veh_Cat3p'].unique()):
+                veh_subset = subset.query(f"Veh_Cat3p == '{veh}'")
+                if len(veh_subset) > 0:
+                    weighted_counts = veh_subset.groupby(category_col)[weight_col].sum()
+                    total_weight = veh_subset[weight_col].sum()
+
+                    for cat, weighted_count in weighted_counts.items():
+                        var_name = f"{prefix}_{cat}_{veh}veh"
+                        if var_name not in results:
+                            results[var_name] = {}
+                        results[var_name][(purpose, 'Daily')] = weighted_count / total_weight
+
+            # For "all" vehicle categories
+            weighted_counts = subset.groupby(category_col)[weight_col].sum()
+            total_weight = subset[weight_col].sum()
+
+            for cat, weighted_count in weighted_counts.items():
+                var_name = f"{prefix}_{cat}_all"
+                if var_name not in results:
+                    results[var_name] = {}
+                results[var_name][(purpose, 'Daily')] = weighted_count / total_weight
+
+    # Convert to DataFrame
+    df_result = pd.DataFrame(results).T
+    df_result.columns = pd.MultiIndex.from_tuples(df_result.columns)
+    df_result = df_result.fillna(0)
+
+    # Sort index
+    df_result = df_result.sort_index()
+
+    return df_result
+```
+
+```{python}
+# Verify categorical shares sum to 1.0000
+def verify_shares(df_shares, tolerance=0.01):
+    """
+    Verify that shares sum to approximately 1 within each vehicle category group.
+
+    Now that we have separate rows for each vehicle ownership category (0veh, 1veh, 2veh, 3+veh, all),
+    we need to verify that shares sum to 1 within each vehicle category separately.
+    """
+    print("=== Verifying Share Sums ===\n")
+
+    # Extract vehicle categories from index
+    # Assuming format: calib_share_{category}_{veh_category}
+    vehicle_categories = df_shares.index.str.extract(r'_(\d\+?veh|all)$')[0].unique()
+
+    print(f"Vehicle categories found: {sorted(vehicle_categories)}\n")
+
+    all_good = True
+    issues = []
+
+    # Check each vehicle category separately
+    for veh_cat in sorted(vehicle_categories):
+        # Filter rows for this vehicle category
+        mask = df_shares.index.str.endswith(f'_{veh_cat}')
+        df_veh = df_shares[mask]
+
+        print(f"--- Checking {veh_cat} ({len(df_veh)} categories) ---")
+
+        # Check sums for each column within this vehicle category
+        veh_issues = []
+        for col in df_veh.columns:
+            col_sum = df_veh[col].sum()
+
+            if abs(col_sum - 1.0) > tolerance:
+                all_good = False
+                veh_issues.append((col, col_sum))
+
+        if not veh_issues:
+            print(f"  ✅ All shares sum to 1.0 for {veh_cat}")
+        else:
+            print(f"  ⚠️  {len(veh_issues)} columns don't sum to 1.0 for {veh_cat}:")
+            for col, sum_val in veh_issues[:5]:  # Show first 5
+                print(f"     {col}: {sum_val:.4f}")
+            if len(veh_issues) > 5:
+                print(f"     ... and {len(veh_issues) - 5} more")
+            issues.extend([(veh_cat, col, sum_val) for col, sum_val in veh_issues])
+        print()
+
+    print(f"{'='*60}")
+    if all_good:
+        print("✅ ALL VEHICLE CATEGORIES: Shares sum to 1.0 (within tolerance)")
+    else:
+        print(f"⚠️  WARNING: {len(issues)} total column/vehicle combinations don't sum to 1.0")
+
+    print(f"\nTotal columns: {len(df_shares.columns)}")
+    print(f"Total vehicle categories: {len(vehicle_categories)}")
+    print(f"Total combinations: {len(df_shares.columns) * len(vehicle_categories)}")
+
+    # Return sums by vehicle category
+    return {veh_cat: df_shares[df_shares.index.str.endswith(f'_{veh_cat}')].sum(axis=0)
+            for veh_cat in sorted(vehicle_categories)}
+```
+
+## Setup BigQuery
+
+```{python}
+#| eval: false
+#| echo: false
+
+# # Import global TDM functions from local 'Resource' clone
+
+# import sys
+# sys.path.insert(0, '../Resources/2-Python/global-functions')
+# import BigQuery
+
+# client = BigQuery.getBigQueryClient_Confidential2023UtahHTS()
+```
+
+```{python}
+# # Import global TDM functions from remote 'Resource' repo
+
+# Fetch and import BigQuery module
+response = fetch_github(
+    'https://raw.githubusercontent.com/WFRCAnalytics/Resources/refs/heads/master/2-Python/global-functions/BigQuery.py',
+    mode="public"
+)
+
+BigQuery = importlib.util.module_from_spec(importlib.util.spec_from_loader('BigQuery', loader=None))
+exec(response.text, BigQuery.__dict__)
+
+# Initiatlize BigQuery Client
+client = BigQuery.getBigQueryClient_Confidential2023UtahHTS()
+```
+
+# Load Data
+
+## UTA On-Board Survey
+
+```{python}
+# Read Linked UTA On-Board Survey Data directly from GitHub repo
+response = fetch_github(
+    "https://raw.githubusercontent.com/WFRCAnalytics/DATA-OBS-Prep-For-TDM/refs/heads/main/_output/UTA_OBS_2024_Linked_FactorAdjusted.csv",
+    mode = "private"
+)
+
+df_obs_linked = pd.read_csv(io.StringIO(response.text))
+df_obs_linked
+```
+
+## Household Travel Survey: Linked Trips
+
+```{python}
+# Load Linked Trips data from 2023 Household Travel Survey
+df_hts_linked = client.query(
+    "SELECT hh_id, PURP7_t, depart_per, model_trip_mode_WFv10, trip_weight FROM " + 'wfrc-modeling-data.prd_tdm_hts_2023.trip_linked'
+).to_dataframe()
+
+df_hts_linked
+```
+
+## Household Travel Survey: Households
+
+```{python}
+# Load Household data from 2023 Household Travel Survey
+df_hts_hh = client.query(
+    "SELECT hh_id, num_vehicles_4cat FROM " + 'wfrc-modeling-data.prd_tdm_hts_2023.hh'
+).to_dataframe()
+
+df_hts_hh
+```
+
+# Understanding Mode Hierarchy
+
+```{mermaid}
+flowchart LR
+  T["🚦 Total Trips"]
+
+  %% Top-level split
+  T --> M["Motorized"]
+  T --> NM["Non-motorized"]
+
+  %% Motorized branch
+  subgraph S1["🚗 Motorized Transportation"]
+    direction TB
+    M --> A["Auto"]
+    M --> TR["Transit"]
+
+    %% Auto
+    A --> DA["Drive alone"]
+    A --> SR["Shared ride"]
+    SR --> SR2["SR2<br/><i>2 people</i>"]
+    SR --> SR3["SR3<br/><i>3+ people</i>"]
+
+    %% Transit (two complementary views)
+    subgraph S1a["🚌 Transit – By Service Type"]
+      direction TB
+      TR --> TM["By service type"]
+      TM --> LB["Local bus"]
+      TM --> CB["Core bus"]
+      TM --> EB["Express bus"]
+      TM --> LRT["LRT<br/><i>light rail</i>"]
+      TM --> CRT["CRT<br/><i>commuter rail</i>"]
+      TM --> BRT["BRT<br/><i>bus rapid</i>"]
+    end
+
+    subgraph S1b["🚶🚗 Transit – By Access Type"]
+      direction TB
+      TR --> TA["By access type"]
+
+      %% Walk-to-transit
+      TA --> WTT["🚶 Walk-to-transit"]
+      WTT --> WLB["Walk → Local bus"]
+      WTT --> WCB["Walk → Core bus"]
+      WTT --> WEB["Walk → Express bus"]
+      WTT --> WLRT["Walk → LRT"]
+      WTT --> WCRT["Walk → CRT"]
+      WTT --> WBRT["Walk → BRT"]
+
+      %% Drive-to-transit
+      TA --> DTT["🚗 Drive-to-transit"]
+      DTT --> DLB["Drive → Local bus"]
+      DTT --> DCB["Drive → Core bus"]
+      DTT --> DEB["Drive → Express bus"]
+      DTT --> DLRT["Drive → LRT"]
+      DTT --> DCRT["Drive → CRT"]
+      DTT --> DBRT["Drive → BRT"]
+    end
+  end
+
+  %% Non-motorized branch
+  subgraph S2["🚶 Non-motorized Transportation"]
+    direction TB
+    NM --> WALK["Walk"]
+    NM --> BIKE["Bike"]
+  end
+
+  %% Styling
+  classDef rootNode fill:#2c3e50,stroke:#34495e,stroke-width:3px,color:#fff,font-weight:bold,font-size:16px
+  classDef motorizedNode fill:#3498db,stroke:#2980b9,stroke-width:2px,color:#fff,font-weight:bold
+  classDef nonMotorizedNode fill:#27ae60,stroke:#229954,stroke-width:2px,color:#fff,font-weight:bold
+  classDef autoNode fill:#e67e22,stroke:#d35400,stroke-width:2px,color:#fff
+  classDef transitNode fill:#9b59b6,stroke:#8e44ad,stroke-width:2px,color:#fff
+  classDef walkTransitNode fill:#1abc9c,stroke:#16a085,stroke-width:2px,color:#fff
+  classDef driveTransitNode fill:#e74c3c,stroke:#c0392b,stroke-width:2px,color:#fff
+  classDef leafNode fill:#ecf0f1,stroke:#95a5a6,stroke-width:1px,color:#2c3e50
+  classDef subgraphStyle fill:#f8f9fa,stroke:#dee2e6,stroke-width:2px
+
+  class T rootNode
+  class M motorizedNode
+  class NM nonMotorizedNode
+  class A,DA,SR,SR2,SR3 autoNode
+  class TR,TM,TA transitNode
+  class WTT,WLB,WCB,WEB,WLRT,WCRT,WBRT walkTransitNode
+  class DTT,DLB,DCB,DEB,DLRT,DCRT,DBRT driveTransitNode
+  class LB,CB,EB,LRT,CRT,BRT,WALK,BIKE leafNode
+```
+
+# Process HTS to get needed vars
+
+OBS has already been processed in OBS Prep repo. So, this section will only Process HTS data to get needed columns.
+
+## Purpose (5-category)
+
+```{python}
+purpose_mapping = {
+    'HBOth' : 'HBO',
+    'NHBNW' : 'NHB',
+    'HBW'   : 'HBW',
+    'NHBW'  : 'NHB',
+    'HBShp' : 'HBO',
+    'HBSch' : 'HBSch',
+    'HBC'   : 'HBC'
+}
+
+df_hts_linked['Purp5_text'] = df_hts_linked['PURP7_t'].map(purpose_mapping)
+```
+
+## Vehicle Ownership
+
+```{python}
+# Join household data to linked trips data
+df_hts_linked = df_hts_linked.merge(
+    df_hts_hh.rename(columns={'num_vehicles_4cat': 'Veh_Cat3p'}),
+    on='hh_id',
+    how='left'  # Keep all trips, even if household data is missing
+)
+
+# Rename the vehicle ownership column to match the OBS data
+df_hts_linked = df_hts_linked.rename(columns={'num_vehicles_4cat': 'Veh_Cat3p'})
+```
+
+## Peak - Offpeak
+
+```{python}
+df_hts_linked['PK_OK'] = np.where(
+    df_hts_linked["depart_per"].isin(["AM", "PM"]),
+    "PK",
+    "OK"
+)
+```
+
+# Data Exploration
+
+## Motorized vs Nonmotorized
+
+```{python}
+(
+    df_hts_linked[
+        (df_hts_linked['model_trip_mode_WFv10'].isin(
+            ["auto_sov", "auto_occ2", "auto_occ3p", "walk-to-transit",
+             "drive-to-transit", "walk", "bike"]
+        )) &
+        (df_hts_linked['Purp5_text'] == 'HBW')
+    ]
+    .assign(motorized_category=lambda x: x['model_trip_mode_WFv10'].map({
+        'auto_sov'         : 'motor',
+        'auto_occ2'        : 'motor',
+        'auto_occ3p'       : 'motor',
+        'walk-to-transit'  : 'motor',
+        'drive-to-transit' : 'motor',
+        'walk'             : 'nonmotor',
+        'bike'             : 'nonmotor'
+    }))
+    .groupby('motorized_category')['trip_weight']
+    .sum()
+    .pipe(lambda x: (x / x.sum() * 100).round(2))
+)
+```
+
+## HTS vs OBS Transit Trips
+
+### Filter for Transit Trips
+
+```{python}
+# Identify transit trips in HTS
+hts_transit = df_hts_linked[
+    df_hts_linked['model_trip_mode_WFv10'].isin(['walk-to-transit', 'drive-to-transit'])
+].copy()
+
+# Filter out microtransit
+obs_transit = df_obs_linked[df_obs_linked['Linked_Mode_txt'] != 'MT'].copy()
+```
+
+### By access mode
+
+```{python}
+hts_by_access = hts_transit.groupby('model_trip_mode_WFv10')['trip_weight'].sum()
+hts_by_access
+```
+
+```{python}
+if 'Ac_Mode2_Model' in obs_transit.columns:
+    obs_by_access = obs_transit.groupby('Ac_Mode2_Model')['trip_weight'].sum().sort_index()
+
+obs_by_access
+```
+
+### By purpose
+
+```{python}
+hts_by_purpose = hts_transit.groupby('Purp5_text')['trip_weight'].sum().sort_index()
+hts_by_purpose
+```
+
+```{python}
+obs_by_purpose = obs_transit.groupby('Purp5_text')['trip_weight'].sum().sort_index()
+obs_by_purpose
+```
+
+### By vehicle ownership
+
+```{python}
+hts_by_veh = hts_transit.groupby('Veh_Cat3p')['trip_weight'].sum().sort_index()
+hts_by_veh
+```
+
+```{python}
+obs_by_veh = obs_transit.groupby('Veh_Cat3p')['trip_weight'].sum().sort_index()
+obs_by_veh
+```
+
+### By period
+
+```{python}
+hts_by_period = hts_transit.groupby('PK_OK')['trip_weight'].sum().sort_index()
+hts_by_period
+```
+
+```{python}
+obs_by_period = obs_transit.groupby('PK_OK')['trip_weight'].sum().sort_index()
+obs_by_period
+```
+
+### Summary
+
+```{python}
+print("\n" + "=" * 80)
+print("3. COMPARISON SUMMARY")
+print("=" * 80)
+
+hts_total = hts_transit['trip_weight'].sum()
+obs_total = obs_transit['trip_weight'].sum()
+ratio = obs_total / hts_total if hts_total > 0 else 0
+
+print(f"\nHTS Daily Transit Trips:  {hts_total:>15,.1f}")
+print(f"OBS Daily Transit Trips:  {obs_total:>15,.1f}")
+print(f"{'─' * 45}")
+print(f"Ratio (OBS/HTS):          {ratio:>15.2f}x")
+print(f"Difference:               {obs_total - hts_total:>15,.1f}")
+print(f"% Difference:             {((obs_total/hts_total - 1) * 100):>15.1f}%")
+```
+
+```{python}
+print("\n" + "=" * 80)
+print("4. DETAILED COMPARISON BY PURPOSE & PERIOD")
+print("=" * 80)
+
+# Create comparison dataframe
+comparison_data = []
+
+for purpose in sorted(df_hts_linked['Purp5_text'].dropna().unique()):
+    for period in ['PK', 'OK']:
+        hts_val = hts_transit[
+            (hts_transit['Purp5_text'] == purpose) &
+            (hts_transit['PK_OK'] == period)
+        ]['trip_weight'].sum()
+
+        obs_val = obs_transit[
+            (obs_transit['Purp5_text'] == purpose) &
+            (obs_transit['PK_OK'] == period)
+        ]['trip_weight'].sum()
+
+        comparison_data.append({
+            'Purpose': purpose,
+            'Period': period,
+            'HTS_Trips': hts_val,
+            'OBS_Trips': obs_val,
+            'Ratio_OBS_HTS': obs_val / hts_val if hts_val > 0 else np.nan,
+            'Difference': obs_val - hts_val
+        })
+
+df_comparison = pd.DataFrame(comparison_data)
+df_comparison = df_comparison.sort_values(['Purpose', 'Period'])
+
+print("\n")
+print(df_comparison.to_string(index=False, float_format=lambda x: f'{x:,.2f}'))
+```
+
+## Create Hybrid Dataframes (HTS Auto/Non-motorized + OBS Transit)
+
+```{python}
+# Non-motorized trips from HTS
+df_hts_nonmotor = (
+    df_hts_linked[df_hts_linked['model_trip_mode_WFv10'].isin(['walk', 'bike'])]
+    [['Veh_Cat3p', 'Purp5_text', 'PK_OK', 'model_trip_mode_WFv10', 'trip_weight']]
+    .rename(columns={'trip_weight': 'weight', 'model_trip_mode_WFv10': 'mode'})
+)
+
+df_hts_nonmotor
+```
+
+```{python}
+# Auto trips from HTS
+df_hts_auto = (
+    df_hts_linked[df_hts_linked['model_trip_mode_WFv10'].isin(['auto_sov', 'auto_occ2', 'auto_occ3p'])]
+    [['Veh_Cat3p', 'Purp5_text', 'PK_OK', 'model_trip_mode_WFv10', 'trip_weight']]
+    .rename(columns={'trip_weight': 'weight', 'model_trip_mode_WFv10': 'mode'})
+)
+
+df_hts_auto
+```
+
+```{python}
+# Transit trips from OBS
+df_obs_transit = (
+    df_obs_linked[df_obs_linked['Linked_Mode_txt'] != 'MT']
+    [['Veh_Cat3p', 'Purp5_text', 'PK_OK', 'Ac_Mode2_Model', 'trip_weight']]
+    .assign(mode=lambda x: x['Ac_Mode2_Model'].map({'Walk': 'walk-to-transit', 'Drive': 'drive-to-transit'}))
+    .rename(columns={'trip_weight': 'weight'})
+    [['Veh_Cat3p', 'Purp5_text', 'PK_OK', 'mode', 'weight']]
+)
+
+df_obs_transit
+```
+
+# Trips: Motorized vs Non-motorized
+
+```{python}
+# 1. All Trips: Motorized vs Non-motorized
+print("\n" + "=" * 60)
+print("1. ALL TRIPS: MOTORIZED VS NON-MOTORIZED")
+print("=" * 60)
+
+df_alltrips_hybrid = pd.concat([
+    df_hts_auto.assign(mode_category='motor'),
+    df_obs_transit.assign(mode_category='motor'),
+    df_hts_nonmotor.assign(mode_category='nonmotor')
+], ignore_index=True)
+
+df_alltrips_cat = calculate_categorical_shares(
+    df_alltrips_hybrid,
+    category_col='mode_category',
+    weight_col='weight',
+    group_cols=['Veh_Cat3p', 'Purp5_text', 'PK_OK'],
+    filter_condition=None,
+    category_mapping=None,
+    prefix='calib_share'
+)
+
+print("\nShape:", df_alltrips_cat.shape)
+print("\nFirst few rows:")
+print(df_alltrips_cat.head(10))
+print("\nVerification:")
+verify_shares(df_alltrips_cat)
+```
+
+## Non-motorized Trips: Walk vs Bike
+
+```{python}
+# 2. NON-MOTORIZED TRIPS
+print("\n" + "=" * 60)
+print("2. NON-MOTORIZED TRIPS")
+print("=" * 60)
+
+# non_motorized_mapping = {
+#     'walk' : 'walk',
+#     'bike' : 'bike'
+# }
+
+df_nonmotorized_cat = calculate_categorical_shares(
+    df_hts_linked,
+    category_col='model_trip_mode_WFv10',
+    weight_col='trip_weight',
+    group_cols=['Veh_Cat3p', 'Purp5_text', 'PK_OK'],
+    filter_condition='model_trip_mode_WFv10 in ["walk", "bike"]',
+    category_mapping=None,
+    prefix='calib_share'
+)
+
+print("\nShape:", df_nonmotorized_cat.shape)
+print("\nFirst few rows:")
+print(df_nonmotorized_cat.head(10))
+print("\nVerification:")
+verify_shares(df_nonmotorized_cat)
+```
+
+## Motorized Trips: Auto vs Transit
+
+```{python}
+# 3. Motorized Trips: Auto vs Transit
+print("\n" + "=" * 60)
+print("3. MOTORIZED TRIPS: AUTO VS TRANSIT")
+print("=" * 60)
+
+df_motorized_hybrid = pd.concat([
+    df_hts_auto.assign(mode_category='auto'),
+    df_obs_transit.assign(mode_category='transit')
+], ignore_index=True)
+
+df_motorized_cat = calculate_categorical_shares(
+    df_motorized_hybrid,
+    category_col='mode_category',
+    weight_col='weight',
+    group_cols=['Veh_Cat3p', 'Purp5_text', 'PK_OK'],
+    filter_condition=None,
+    category_mapping=None,
+    prefix='calib_share'
+)
+
+print("\nShape:", df_motorized_cat.shape)
+print("\nFirst few rows:")
+print(df_motorized_cat.head(10))
+print("\nVerification:")
+verify_shares(df_motorized_cat)
+```
+
+### Auto Trips: Drive Alone vs Shared Rides
+
+```{python}
+# 4. Auto Trips: Drive Alone vs Shared Rides
+print("\n" + "=" * 60)
+print("4. AUTO TRIPS: DRIVE ALONE VS SHARED RIDES")
+print("=" * 60)
+
+auto_ride_mapping = {
+    'auto_sov'   : 'alone',
+    'auto_occ2'  : 'shared',
+    'auto_occ3p' : 'shared'
+}
+
+df_auto_riders = calculate_categorical_shares(
+    df_hts_linked,
+    category_col='model_trip_mode_WFv10',
+    weight_col='trip_weight',
+    group_cols=['Veh_Cat3p', 'Purp5_text', 'PK_OK'],
+    filter_condition='model_trip_mode_WFv10 in ["auto_sov", "auto_occ2", "auto_occ3p"]',
+    category_mapping=auto_ride_mapping,
+    prefix='calib_share'
+)
+
+print("\nShape:", df_auto_riders.shape)
+print("\nFirst few rows:")
+print(df_auto_riders.head(10))
+print("\nVerification:")
+verify_shares(df_auto_riders)
+```
+
+#### Shared Rides: 2 People vs 3+ People
+
+```{python}
+# 5. Shared Ride by the Number of People
+print("\n" + "=" * 60)
+print("5. SHARED RIDER BY NUMBER OF PEOPLE")
+print("=" * 60)
+
+shared_ride_mapping = {
+    'auto_occ2' : 'sr2',
+    'auto_occ3p': 'sr3'
+}
+
+df_shared_by_person = calculate_categorical_shares(
+    df_hts_linked,
+    category_col='model_trip_mode_WFv10',
+    weight_col='trip_weight',
+    group_cols=['Veh_Cat3p', 'Purp5_text', 'PK_OK'],
+    filter_condition='model_trip_mode_WFv10 in ["auto_occ2", "auto_occ3p"]',
+    category_mapping=shared_ride_mapping,
+    prefix='calib_share'
+)
+
+print("\nShape:", df_shared_by_person.shape)
+print("\nFirst few rows:")
+print(df_shared_by_person.head(10))
+print("\nVerification:")
+verify_shares(df_shared_by_person)
+```
+
+### Transit Trips: By Service and By Access Mode
+
+#### By Service Type
+
+```{python}
+# 6. Transit by Service Type (within linked transit trips)
+print("\n" + "=" * 60)
+print("6. TRANSIT BY SERVICE TYPE")
+print("=" * 60)
+
+service_mapping = {
+    'LCL': 'local',
+    'COR': 'core',
+    'EXP': 'express',
+    'LRT': 'lrt',
+    'CRT': 'crt',
+    'BRT': 'brt'
+}
+
+df_transit_by_service = calculate_categorical_shares(
+    df_obs_linked,
+    category_col='Linked_Mode_txt',
+    weight_col='trip_weight',
+    group_cols=['Veh_Cat3p', 'Purp5_text', 'PK_OK'],
+    filter_condition='Linked_Mode_txt != "MT"',
+    category_mapping=service_mapping,
+    prefix='calib_share'
+)
+
+print("\nShape:", df_transit_by_service.shape)
+print("\nFirst few rows:")
+print(df_transit_by_service.head(10))
+print("\nVerification:")
+verify_shares(df_transit_by_service)
+```
+
+#### By Access Mode: Walk vs Drive to Transit
+
+```{python}
+# 7. Transit by Access Type (Walk vs Drive) (within linked transit trips)
+print("\n" + "=" * 60)
+print("7. TRANSIT BY ACCESS TYPE")
+print("=" * 60)
+
+access_mapping = {
+    'Walk': 'walkacc',
+    'Drive': 'driveacc'
+}
+
+df_transit_by_access = calculate_categorical_shares(
+    df_obs_linked,
+    category_col='Ac_Mode2_Model',
+    weight_col='trip_weight',
+    group_cols=['Veh_Cat3p', 'Purp5_text', 'PK_OK'],
+    filter_condition='Linked_Mode_txt != "MT"',
+    category_mapping=access_mapping,
+    prefix='calib_share'
+)
+
+print("\nShape:", df_transit_by_access.shape)
+print("\nFirst few rows:")
+print(df_transit_by_access.head(10))
+print("\nVerification:")
+verify_shares(df_transit_by_access)
+```
+
+##### Walk to Transit
+
+```{python}
+# 8. Walk-to-Transit by Service Type (within walk-to-transit trips)
+print("\n" + "=" * 60)
+print("8. WALK-TO-TRANSIT BY SERVICE TYPE")
+print("=" * 60)
+
+walk_service_mapping = {
+    'LCL': 'wlocal',
+    'EXP': 'wexpress',
+    'LRT': 'wlrt',
+    'CRT': 'wcrt',
+    'BRT': 'wbrt'
+}
+
+df_walk_to_transit = calculate_categorical_shares(
+    df_obs_linked,
+    category_col='Linked_Mode_txt',
+    weight_col='trip_weight',
+    group_cols=['Veh_Cat3p', 'Purp5_text', 'PK_OK'],
+    filter_condition='Ac_Mode2_Model == "Walk" & Linked_Mode_txt != "MT"',
+    category_mapping=walk_service_mapping,
+    prefix='calib_share'
+)
+
+
+print("\nShape:", df_walk_to_transit.shape)
+print("\nFirst few rows:")
+print(df_walk_to_transit.head(10))
+print("\nVerification:")
+verify_shares(df_walk_to_transit)
+```
+
+##### Drive to Transit
+
+```{python}
+# 9. Drive-to-Transit by Service Type (within drive-to-transit trips)
+print("\n" + "=" * 60)
+print("9. DRIVE-TO-TRANSIT BY SERVICE TYPE")
+print("=" * 60)
+
+drive_service_mapping = {
+    'LCL': 'dlocal',
+    'EXP': 'dexpress',
+    'LRT': 'dlrt',
+    'CRT': 'dcrt',
+    'BRT': 'dbrt'
+}
+
+df_drive_to_transit = calculate_categorical_shares(
+    df_obs_linked,
+    category_col='Linked_Mode_txt',
+    weight_col='trip_weight',
+    group_cols=['Veh_Cat3p', 'Purp5_text', 'PK_OK'],
+    filter_condition='Ac_Mode2_Model == "Drive" & Linked_Mode_txt != "MT"',
+    category_mapping=drive_service_mapping,
+    prefix='calib_share'
+)
+
+print("\nShape:", df_drive_to_transit.shape)
+print("\nFirst few rows:")
+print(df_drive_to_transit.head(10))
+print("\nVerification:")
+verify_shares(df_drive_to_transit)
+```
+
+# Export Calibration Target Files
+
+```{python}
+import pandas as pd
+import numpy as np
+
+def create_tree_dataframe(
+    df_alltrips_cat,
+    df_nonmotorized_cat,
+    df_motorized_cat,
+    df_auto_riders,
+    df_shared_by_person,
+    df_transit_by_access,
+    df_walk_to_transit,
+    df_drive_to_transit,
+    purpose='HBW',
+    veh_cat='all',
+    period=None
+):
+    """
+    Create a hierarchical dataframe using path format.
+    Each row represents one node with its full path from root.
+    Returns dataframe with level1, level2, level3, level4, and value columns.
+
+    Parameters:
+    -----------
+    purpose : str
+        Trip purpose (e.g., 'HBW', 'HBO', 'NHB', 'HBC', 'HBSch')
+    veh_cat : str
+        Vehicle category ('all', '0veh', '1veh', '2veh', '3veh')
+    period : str or None
+        Time period ('PK', 'OK', 'Daily', or None to average PK+OK)
+    """
+
+    def get_value(df, var_name, purpose, veh_cat='all', period=None):
+        """Get value for specific purpose, vehicle category, and period"""
+        var_full = f"calib_share_{var_name}_{veh_cat}"
+
+        if var_full not in df.index:
+            return 0.0
+
+        # If specific period is requested
+        if period:
+            if (purpose, period) in df.columns:
+                val = df.loc[var_full, (purpose, period)]
+                return val if pd.notna(val) else 0.0
+            else:
+                return 0.0
+
+        # Otherwise average PK and OK
+        total = 0.0
+        count = 0
+
+        for per in ['PK', 'OK']:
+            if (purpose, per) in df.columns:
+                val = df.loc[var_full, (purpose, per)]
+                if pd.notna(val):
+                    total += val
+                    count += 1
+
+        # If no PK/OK, try Daily
+        if count == 0 and (purpose, 'Daily') in df.columns:
+            val = df.loc[var_full, (purpose, 'Daily')]
+            if pd.notna(val):
+                return val
+
+        return total / count if count > 0 else 0.0
+
+    # Get all conditional shares
+    nonmotor_share = get_value(df_alltrips_cat, 'nonmotor', purpose, veh_cat, period)
+    motor_share = 1.0 - nonmotor_share
+
+    walk_share = get_value(df_nonmotorized_cat, 'walk', purpose, veh_cat, period)
+    bike_share = get_value(df_nonmotorized_cat, 'bike', purpose, veh_cat, period)
+
+    auto_share = get_value(df_motorized_cat, 'auto', purpose, veh_cat, period)
+    transit_share = get_value(df_motorized_cat, 'transit', purpose, veh_cat, period)
+
+    alone_share = get_value(df_auto_riders, 'alone', purpose, veh_cat, period)
+    shared_share = get_value(df_auto_riders, 'shared', purpose, veh_cat, period)
+
+    sr2_share = get_value(df_shared_by_person, 'sr2', purpose, veh_cat, period)
+    sr3_share = get_value(df_shared_by_person, 'sr3', purpose, veh_cat, period)
+
+    walkacc_share = get_value(df_transit_by_access, 'walkacc', purpose, veh_cat, period)
+    driveacc_share = get_value(df_transit_by_access, 'driveacc', purpose, veh_cat, period)
+
+    # Get walk-to-transit service type shares
+    wlocal_share = get_value(df_walk_to_transit, 'wlocal', purpose, veh_cat, period)
+    wcore_share = get_value(df_walk_to_transit, 'wcore', purpose, veh_cat, period)
+    wexpress_share = get_value(df_walk_to_transit, 'wexpress', purpose, veh_cat, period)
+    wlrt_share = get_value(df_walk_to_transit, 'wlrt', purpose, veh_cat, period)
+    wcrt_share = get_value(df_walk_to_transit, 'wcrt', purpose, veh_cat, period)
+    wbrt_share = get_value(df_walk_to_transit, 'wbrt', purpose, veh_cat, period)
+
+    # Get drive-to-transit service type shares
+    dlocal_share = get_value(df_drive_to_transit, 'dlocal', purpose, veh_cat, period)
+    dcore_share = get_value(df_drive_to_transit, 'dcore', purpose, veh_cat, period)
+    dexpress_share = get_value(df_drive_to_transit, 'dexpress', purpose, veh_cat, period)
+    dlrt_share = get_value(df_drive_to_transit, 'dlrt', purpose, veh_cat, period)
+    dcrt_share = get_value(df_drive_to_transit, 'dcrt', purpose, veh_cat, period)
+    dbrt_share = get_value(df_drive_to_transit, 'dbrt', purpose, veh_cat, period)
+
+    # Base value
+    total_value = 1.0
+
+    # Create rows in path format
+    rows = []
+
+    # Determine display period
+    display_period = period if period else 'Daily'
+
+    # Non-motorized branch
+    rows.append({
+        'purpose': purpose,
+        'period': display_period,
+        'veh_cat': veh_cat,
+        'level1': 'Non-motorized',
+        'level2': 'Walk',
+        'level3': None,
+        'level4': None,
+        'value': total_value * nonmotor_share * walk_share * 100
+    })
+
+    rows.append({
+        'purpose': purpose,
+        'period': display_period,
+        'veh_cat': veh_cat,
+        'level1': 'Non-motorized',
+        'level2': 'Bike',
+        'level3': None,
+        'level4': None,
+        'value': total_value * nonmotor_share * bike_share * 100
+    })
+
+    # Motorized > Auto > Drive Alone
+    rows.append({
+        'purpose': purpose,
+        'period': display_period,
+        'veh_cat': veh_cat,
+        'level1': 'Motorized',
+        'level2': 'Auto',
+        'level3': 'Drive Alone',
+        'level4': None,
+        'value': total_value * motor_share * auto_share * alone_share * 100
+    })
+
+    # Motorized > Auto > Shared Ride > SR2
+    rows.append({
+        'purpose': purpose,
+        'period': display_period,
+        'veh_cat': veh_cat,
+        'level1': 'Motorized',
+        'level2': 'Auto',
+        'level3': 'Shared Ride',
+        'level4': 'SR2 (2 people)',
+        'value': total_value * motor_share * auto_share * shared_share * sr2_share * 100
+    })
+
+    # Motorized > Auto > Shared Ride > SR3
+    rows.append({
+        'purpose': purpose,
+        'period': display_period,
+        'veh_cat': veh_cat,
+        'level1': 'Motorized',
+        'level2': 'Auto',
+        'level3': 'Shared Ride',
+        'level4': 'SR3 (3+ people)',
+        'value': total_value * motor_share * auto_share * shared_share * sr3_share * 100
+    })
+
+    # Motorized > Transit > Walk-to-Transit > Service Types
+    walk_transit_base = total_value * motor_share * transit_share * walkacc_share * 100
+
+    rows.append({
+        'purpose': purpose,
+        'period': display_period,
+        'veh_cat': veh_cat,
+        'level1': 'Motorized',
+        'level2': 'Transit',
+        'level3': 'Walk-to-Transit',
+        'level4': 'Local Bus',
+        'value': walk_transit_base * wlocal_share
+    })
+
+    rows.append({
+        'purpose': purpose,
+        'period': display_period,
+        'veh_cat': veh_cat,
+        'level1': 'Motorized',
+        'level2': 'Transit',
+        'level3': 'Walk-to-Transit',
+        'level4': 'Core Bus',
+        'value': walk_transit_base * wcore_share
+    })
+
+    rows.append({
+        'purpose': purpose,
+        'period': display_period,
+        'veh_cat': veh_cat,
+        'level1': 'Motorized',
+        'level2': 'Transit',
+        'level3': 'Walk-to-Transit',
+        'level4': 'Express Bus',
+        'value': walk_transit_base * wexpress_share
+    })
+
+    rows.append({
+        'purpose': purpose,
+        'period': display_period,
+        'veh_cat': veh_cat,
+        'level1': 'Motorized',
+        'level2': 'Transit',
+        'level3': 'Walk-to-Transit',
+        'level4': 'LRT',
+        'value': walk_transit_base * wlrt_share
+    })
+
+    rows.append({
+        'purpose': purpose,
+        'period': display_period,
+        'veh_cat': veh_cat,
+        'level1': 'Motorized',
+        'level2': 'Transit',
+        'level3': 'Walk-to-Transit',
+        'level4': 'CRT',
+        'value': walk_transit_base * wcrt_share
+    })
+
+    rows.append({
+        'purpose': purpose,
+        'period': display_period,
+        'veh_cat': veh_cat,
+        'level1': 'Motorized',
+        'level2': 'Transit',
+        'level3': 'Walk-to-Transit',
+        'level4': 'BRT',
+        'value': walk_transit_base * wbrt_share
+    })
+
+    # Motorized > Transit > Drive-to-Transit > Service Types
+    drive_transit_base = total_value * motor_share * transit_share * driveacc_share * 100
+
+    rows.append({
+        'purpose': purpose,
+        'period': display_period,
+        'veh_cat': veh_cat,
+        'level1': 'Motorized',
+        'level2': 'Transit',
+        'level3': 'Drive-to-Transit',
+        'level4': 'Local Bus',
+        'value': drive_transit_base * dlocal_share
+    })
+
+    rows.append({
+        'purpose': purpose,
+        'period': display_period,
+        'veh_cat': veh_cat,
+        'level1': 'Motorized',
+        'level2': 'Transit',
+        'level3': 'Drive-to-Transit',
+        'level4': 'Core Bus',
+        'value': drive_transit_base * dcore_share
+    })
+
+    rows.append({
+        'purpose': purpose,
+        'period': display_period,
+        'veh_cat': veh_cat,
+        'level1': 'Motorized',
+        'level2': 'Transit',
+        'level3': 'Drive-to-Transit',
+        'level4': 'Express Bus',
+        'value': drive_transit_base * dexpress_share
+    })
+
+    rows.append({
+        'purpose': purpose,
+        'period': display_period,
+        'veh_cat': veh_cat,
+        'level1': 'Motorized',
+        'level2': 'Transit',
+        'level3': 'Drive-to-Transit',
+        'level4': 'LRT',
+        'value': drive_transit_base * dlrt_share
+    })
+
+    rows.append({
+        'purpose': purpose,
+        'period': display_period,
+        'veh_cat': veh_cat,
+        'level1': 'Motorized',
+        'level2': 'Transit',
+        'level3': 'Drive-to-Transit',
+        'level4': 'CRT',
+        'value': drive_transit_base * dcrt_share
+    })
+
+    rows.append({
+        'purpose': purpose,
+        'period': display_period,
+        'veh_cat': veh_cat,
+        'level1': 'Motorized',
+        'level2': 'Transit',
+        'level3': 'Drive-to-Transit',
+        'level4': 'BRT',
+        'value': drive_transit_base * dbrt_share
+    })
+
+    df_tree = pd.DataFrame(rows)
+    return df_tree
+
+
+# Create comprehensive dataframe with all combinations
+
+# Define all categories
+purposes = ['HBW', 'HBO', 'NHB', 'HBC', 'HBSch']
+periods = ['PK', 'OK', 'Daily']
+veh_cats = ['all', '0veh', '1veh', '2veh', '3veh']
+
+# Create list to store all dataframes
+all_dfs = []
+
+# Loop through all combinations
+for purpose in purposes:
+    for period in periods:
+        # Skip Daily for purposes that have PK/OK breakdown
+        if purpose in ['HBW', 'HBO', 'NHB'] and period == 'Daily':
+            continue
+
+        # Skip PK/OK for purposes that only have Daily
+        if purpose in ['HBC', 'HBSch'] and period in ['PK', 'OK']:
+            continue
+
+        for veh_cat in veh_cats:
+            df_temp = create_tree_dataframe(
+                df_alltrips_cat,
+                df_nonmotorized_cat,
+                df_motorized_cat,
+                df_auto_riders,
+                df_shared_by_person,
+                df_transit_by_access,
+                df_walk_to_transit,
+                df_drive_to_transit,
+                purpose=purpose,
+                veh_cat=veh_cat,
+                period=period
+            )
+            all_dfs.append(df_temp)
+
+# Combine all dataframes
+df_tree_all = pd.concat(all_dfs, ignore_index=True)
+
+df_tree_all.head(20)
+```
+
+```{python}
+#| echo: false
+#| eval: false
+
+# Create a simple treemap for HBW, all vehicles, PK period
+df_filtered = df_tree_all.query("purpose == 'HBW' & veh_cat == 'all' & period == 'PK'").copy()
+
+# Create treemap using path parameter
+import plotly.express as px
+
+fig = px.treemap(
+    df_filtered,
+    path=[px.Constant("All Trips"), 'level1', 'level2', 'level3', 'level4'],
+    values='value',
+    branchvalues="total"
+)
+fig.update_traces(root_color="lightgrey")
+fig.update_layout(margin = dict(t=50, l=25, r=25, b=25))
+fig.show()
+```
+
+```{python}
+# Create interactive treemap with percentages of parent and total
+import plotly.graph_objects as go
+import pandas as pd
+
+# Get unique values for dropdowns
+purposes = sorted(df_tree_all['purpose'].unique())
+periods = sorted(df_tree_all['period'].unique())
+veh_cats = sorted(df_tree_all['veh_cat'].unique())
+
+# Create all trace combinations and store them
+traces = []
+trace_lookup = {}  # Map (purpose, period, veh_cat) to trace index
+
+for purpose in purposes:
+    for period in periods:
+        for veh_cat in veh_cats:
+            df_filtered = df_tree_all.query(
+                f"purpose == '{purpose}' & veh_cat == '{veh_cat}' & period == '{period}'"
+            ).copy()
+
+            if len(df_filtered) > 0:
+                # Create treemap trace
+                labels = []
+                parents = []
+                values = []
+                text = []  # Custom text for hover
+
+                # Root
+                labels.append("All Trips")
+                parents.append("")
+                values.append(100)
+                text.append("All Trips<br>100%")
+
+                # Add all hierarchy levels
+                for _, row in df_filtered.iterrows():
+                    # Level 1
+                    if row['level1'] not in labels:
+                        level1_value = df_filtered[df_filtered['level1'] == row['level1']]['value'].sum()
+                        labels.append(row['level1'])
+                        parents.append("All Trips")
+                        values.append(level1_value)
+                        text.append(f"{row['level1']}<br>{level1_value:.2f}% of total")
+
+                    # Level 2
+                    if pd.notna(row['level2']):
+                        level2_id = row['level2']
+                        if level2_id not in labels:
+                            level2_value = df_filtered[
+                                (df_filtered['level1'] == row['level1']) &
+                                (df_filtered['level2'] == row['level2'])
+                            ]['value'].sum()
+                            level1_value = df_filtered[df_filtered['level1'] == row['level1']]['value'].sum()
+                            pct_of_parent = (level2_value / level1_value * 100) if level1_value > 0 else 0
+
+                            labels.append(level2_id)
+                            parents.append(row['level1'])
+                            values.append(level2_value)
+                            text.append(f"{level2_id}<br>{pct_of_parent:.1f}% of {row['level1']}<br>{level2_value:.2f}% of total")
+
+                        # Level 3
+                        if pd.notna(row['level3']):
+                            level3_id = row['level3']
+                            if level3_id not in labels:
+                                level3_value = df_filtered[
+                                    (df_filtered['level1'] == row['level1']) &
+                                    (df_filtered['level2'] == row['level2']) &
+                                    (df_filtered['level3'] == row['level3'])
+                                ]['value'].sum()
+                                level2_value = df_filtered[
+                                    (df_filtered['level1'] == row['level1']) &
+                                    (df_filtered['level2'] == row['level2'])
+                                ]['value'].sum()
+                                pct_of_parent = (level3_value / level2_value * 100) if level2_value > 0 else 0
+
+                                labels.append(level3_id)
+                                parents.append(level2_id)
+                                values.append(level3_value)
+                                text.append(f"{level3_id}<br>{pct_of_parent:.1f}% of {level2_id}<br>{level3_value:.2f}% of total")
+
+                            # Level 4
+                            if pd.notna(row['level4']):
+                                level4_id = row['level4']
+                                level4_value = row['value']
+                                level3_value = df_filtered[
+                                    (df_filtered['level1'] == row['level1']) &
+                                    (df_filtered['level2'] == row['level2']) &
+                                    (df_filtered['level3'] == row['level3'])
+                                ]['value'].sum()
+                                pct_of_parent = (level4_value / level3_value * 100) if level3_value > 0 else 0
+
+                                labels.append(level4_id)
+                                parents.append(level3_id)
+                                values.append(level4_value)
+                                text.append(f"{level4_id}<br>{pct_of_parent:.1f}% of {level3_id}<br>{level4_value:.2f}% of total")
+
+                trace = go.Treemap(
+                    labels=labels,
+                    parents=parents,
+                    values=values,
+                    customdata=text,
+                    textinfo="label",
+                    textposition="middle center",
+                    hovertemplate='<b>%{label}</b><br>%{customdata}<extra></extra>',
+                    branchvalues="total",
+                    visible=False,
+                    name=f"{purpose}_{period}_{veh_cat}"
+                )
+
+                trace_lookup[(purpose, period, veh_cat)] = len(traces)
+                traces.append(trace)
+
+# Set initial trace visible
+initial_purpose = 'HBW'
+initial_period = 'PK'
+initial_veh = 'all'
+
+if (initial_purpose, initial_period, initial_veh) in trace_lookup:
+    traces[trace_lookup[(initial_purpose, initial_period, initial_veh)]].visible = True
+
+# Create figure
+fig = go.Figure(data=traces)
+
+# Create combined dropdown options (all combinations)
+dropdown_options = []
+
+for purpose in purposes:
+    for period in periods:
+        # Check if this purpose-period combination exists
+        has_data = False
+        for veh_cat in veh_cats:
+            if (purpose, period, veh_cat) in trace_lookup:
+                has_data = True
+                break
+
+        if not has_data:
+            continue
+
+        for veh_cat in veh_cats:
+            if (purpose, period, veh_cat) in trace_lookup:
+                visible = [False] * len(traces)
+                idx = trace_lookup[(purpose, period, veh_cat)]
+                visible[idx] = True
+
+                dropdown_options.append(
+                    dict(
+                        label=f"{purpose} | {period} | {veh_cat}",
+                        method="update",
+                        args=[
+                            {"visible": visible},
+                            {"title": f"Mode Choice Hierarchy: {purpose} - {period} - {veh_cat}"}
+                        ]
+                    )
+                )
+
+# Update layout with single combined dropdown
+fig.update_layout(
+    updatemenus=[
+        dict(
+            buttons=dropdown_options,
+            direction="down",
+            showactive=True,
+            x=0.5,
+            xanchor="center",
+            y=1.15,
+            yanchor="top",
+            bgcolor="white",
+            bordercolor="gray",
+            borderwidth=1
+        )
+    ],
+    title=f"Mode Choice Hierarchy: {initial_purpose} - {initial_period} - {initial_veh}",
+    margin=dict(t=120, l=25, r=25, b=25),
+    height=800
+)
+
+fig.update_traces(root_color="lightgrey")
+
+fig.show()
+```
+
+## Output Folder
+
+```{python}
+# Create output directory if it doesn't exist
+output_dir = Path("_output")
+output_dir.mkdir(parents=True, exist_ok=True)
+
+print("=" * 80)
+print("EXPORTING CALIBRATION TARGET FILES")
+print("=" * 80)
+```
+
+## Helper Functions
+
+### Extract Values
+
+```{python}
+def extract_values(df, purpose, period, pattern, include_veh_categories=True):
+    """
+    Extract values from dataframe for given purpose/period matching a pattern.
+
+    Parameters:
+    -----------
+    df : DataFrame
+        DataFrame with MultiIndex columns (purpose, period)
+    purpose : str
+        Purpose to filter (e.g., 'HBW', 'HBO')
+    period : str
+        Period to filter (e.g., 'PK', 'OK', 'Daily')
+    pattern : str
+        Pattern to match in index (e.g., 'motor', 'bike', 'transit')
+    include_veh_categories : bool
+        If True, include all vehicle categories. If False, only include '_all' and strip suffix.
+
+    Returns:
+    --------
+    dict : {variable_name: value}
+    """
+    results = {}
+
+    # Check if column exists
+    if (purpose, period) not in df.columns:
+        return results
+
+    # Filter rows matching pattern
+    mask = df.index.str.contains(pattern)
+
+    for idx in df[mask].index:
+        value = df.loc[idx, (purpose, period)]
+
+        if include_veh_categories:
+            # Include all vehicle categories as-is
+            results[idx] = value
+        else:
+            # Only include '_all' suffix and strip it
+            if idx.endswith('_all'):
+                # Remove '_all' suffix
+                var_name = idx.rsplit('_', 1)[0]
+                results[var_name] = value
+
+    return results
+```
+
+### Export Function
+
+```{python}
+def export_calib_file(purpose, period, include_veh_categories=True):
+    """
+    Export calibration target file for a given purpose and period.
+
+    Parameters:
+    -----------
+    purpose : str
+        Trip purpose (HBW, HBO, NHB, HBC, HBSch)
+    period : str
+        Time period (PK, OK, Daily)
+    include_veh_categories : bool
+        If True, include vehicle category breakdowns (_0veh, _1veh, etc.)
+        If False, only use aggregate values without vehicle suffix
+    """
+
+    # Determine file period (Daily becomes 'pk' for HBC/HBSch)
+    file_period = 'pk' if period == 'Daily' else period.lower()
+
+    # Determine display period for header
+    display_period = file_period.capitalize()
+    # display_period = 'Pk' if period == 'PK' or period == 'Daily' else 'Ok'
+
+    filename = f"calib_target_{purpose.lower()}_{file_period}.txt"
+    filepath = os.path.join(output_dir, filename)
+
+    print(f"\nCreating {filename}... (Vehicle categories: {'Yes' if include_veh_categories else 'No'})")
+
+    with open(filepath, 'w') as f:
+        # Write header
+        f.write(f";Calibration target values - {purpose} {display_period}\t\t\n")
+        f.write("\t\t\n")
+
+        # Write disclaimer
+        f.write(f";Note: Not all of the variables listed below are used directly in the Mode Choice model. Some are included solely for verification and cross-checking purposes.\t\t\n")
+        f.write("\t\t\n")
+
+        # =====================================================================
+        # SECTION 1: Motorized vs Non-motorized (within total trips)
+        # =====================================================================
+        f.write(";relative within total trips\t\t\n")
+
+        # Non-motorized shares only
+        nonmotorized = extract_values(df_alltrips_cat, purpose, period, 'nonmotor_', include_veh_categories)
+        if nonmotorized:
+            f.write("  ;nonmotorized shares \t\t\n")
+            for var, val in sorted(nonmotorized.items()):
+                f.write(f"  {var:<30}\t=\t{val:.4f}\n")
+
+        f.write("\t\t\n")
+        f.write("\t\t\n")
+
+        # =====================================================================
+        # SECTION 2: Walk vs Bike (within nonmotorized)
+        # =====================================================================
+        f.write(";relative within nonmotorized\t\t\n")
+
+        # Walk shares
+        walk = extract_values(df_nonmotorized_cat, purpose, period, 'walk_', include_veh_categories)
+        if walk:
+            f.write("  ;walk shares \t\t\n")
+            for var, val in sorted(walk.items()):
+                f.write(f"  {var:<30}\t=\t{val:.4f}\n")
+            f.write("\t\t\n")
+
+        # Bike shares
+        bike = extract_values(df_nonmotorized_cat, purpose, period, 'bike_', include_veh_categories)
+        if bike:
+            f.write("  ;bike shares \t\t\n")
+            for var, val in sorted(bike.items()):
+                f.write(f"  {var:<30}\t=\t{val:.4f}\n")
+
+        f.write("\t\t\n")
+        f.write("\t\t\n")
+
+        # =====================================================================
+        # SECTION 3: Drive Alone vs Shared Ride (within auto)
+        # =====================================================================
+        f.write(";relative within auto\t\t\n")
+
+        # Drive alone shares
+        alone = extract_values(df_auto_riders, purpose, period, 'alone_', include_veh_categories)
+        if alone:
+            f.write("  ;drive alone shares \t\t\n")
+            for var, val in sorted(alone.items()):
+                f.write(f"  {var:<30}\t=\t{val:.4f}\n")
+            f.write("\t\t\n")
+
+        # Shared ride shares
+        shared = extract_values(df_auto_riders, purpose, period, 'shared_', include_veh_categories)
+        if shared:
+            f.write("  ;shared ride shares \t\t\n")
+            for var, val in sorted(shared.items()):
+                f.write(f"  {var:<30}\t=\t{val:.4f}\n")
+
+        f.write("\t\t\n")
+        f.write("\t\t\n")
+
+        # =====================================================================
+        # SECTION 4: SR2 vs SR3 (within shared ride)
+        # =====================================================================
+        f.write(";relative within shared ride\t\t\n")
+
+        # SR2 shares
+        sr2 = extract_values(df_shared_by_person, purpose, period, 'sr2_', include_veh_categories)
+        if sr2:
+            f.write("  ;sr2 shares \t\t\n")
+            for var, val in sorted(sr2.items()):
+                f.write(f"  {var:<30}\t=\t{val:.4f}\n")
+            f.write("\t\t\n")
+
+        # SR3 shares
+        sr3 = extract_values(df_shared_by_person, purpose, period, 'sr3_', include_veh_categories)
+        if sr3:
+            f.write("  ;sr3 shares \t\t\n")
+            for var, val in sorted(sr3.items()):
+                f.write(f"  {var:<30}\t=\t{val:.4f}\n")
+
+        f.write("\t\t\n")
+        f.write("\t\t\n")
+
+        # =====================================================================
+        # SECTION 5: Auto vs Transit (within motorized)
+        # =====================================================================
+        f.write(";relative within motorized\t\t\n")
+
+        # Auto shares
+        auto = extract_values(df_motorized_cat, purpose, period, 'auto_', include_veh_categories)
+        if auto:
+            f.write("  ;auto shares \t\t\n")
+            for var, val in sorted(auto.items()):
+                f.write(f"  {var:<30}\t=\t{val:.4f}\n")
+            f.write("\t\t\n")
+
+        # Transit shares
+        transit = extract_values(df_motorized_cat, purpose, period, 'transit_', include_veh_categories)
+        if transit:
+            f.write("  ;transit shares \t\t\n")
+            for var, val in sorted(transit.items()):
+                f.write(f"  {var:<30}\t=\t{val:.4f}\n")
+            f.write(" \t\t\n")
+
+        f.write("\t\t\n")
+
+        # =====================================================================
+        # SECTION 6: Transit by Service Type (within transit)
+        # =====================================================================
+        f.write(";relative within transit\t\t\n")
+
+        # Get all transit service types
+        service_types = ['local', 'core', 'brt', 'lrt', 'express', 'crt']
+        transit_services = {}
+        for service in service_types:
+            vals = extract_values(df_transit_by_service, purpose, period, f'{service}_', include_veh_categories)
+            transit_services.update(vals)
+
+        if transit_services:
+            for var, val in sorted(transit_services.items()):
+                f.write(f"  {var:<30}\t=\t{val:.4f}\n")
+            f.write("  \t\t\n")
+
+        f.write("\t\t\n")
+
+        # =====================================================================
+        # SECTION 7: Walk vs Drive Access (within transit)
+        # =====================================================================
+        f.write(";relative within transit\t\t\n")
+
+        # Walk access shares
+        walkacc = extract_values(df_transit_by_access, purpose, period, 'walkacc_', include_veh_categories)
+        if walkacc:
+            f.write("  ;walk-to-transit shares \t\t\n")
+            for var, val in sorted(walkacc.items()):
+                f.write(f"  {var:<30}\t=\t{val:.4f}\n")
+            f.write("\t\t\n")
+
+        # Drive access shares
+        driveacc = extract_values(df_transit_by_access, purpose, period, 'driveacc_', include_veh_categories)
+        if driveacc:
+            f.write("  ;drive-to-transit shares \t\t\n")
+            for var, val in sorted(driveacc.items()):
+                f.write(f"  {var:<30}\t=\t{val:.4f}\n")
+
+        f.write("\t\t\n")
+        f.write("\t\t\n")
+
+        # =====================================================================
+        # SECTION 8: Walk-to-Transit by Service (within walkacc)
+        # =====================================================================
+        f.write(";relative within walkacc\t\t\n")
+
+        # Get all walk-to-transit service types
+        walk_services = {}
+        for service in ['wlocal', 'wcore', 'wbrt', 'wlrt', 'wexpress', 'wcrt']:
+            vals = extract_values(df_walk_to_transit, purpose, period, f'{service}_', include_veh_categories)
+            walk_services.update(vals)
+
+        if walk_services:
+            for var, val in sorted(walk_services.items()):
+                f.write(f"  {var:<30}\t=\t{val:.4f}\n")
+
+        f.write("\t\t\n")
+        f.write("\t\t\n")
+
+        # =====================================================================
+        # SECTION 9: Drive-to-Transit by Service (within driveacc)
+        # =====================================================================
+        f.write(";relative within driveacc\t\t\n")
+
+        # Get all drive-to-transit service types
+        drive_services = {}
+        for service in ['dlocal', 'dcore', 'dbrt', 'dlrt', 'dexpress', 'dcrt']:
+            vals = extract_values(df_drive_to_transit, purpose, period, f'{service}_', include_veh_categories)
+            drive_services.update(vals)
+
+        if drive_services:
+            for var, val in sorted(drive_services.items()):
+                f.write(f"  {var:<30}\t=\t{val:.4f}\n")
+
+    print(f"  ✅ Written to {filepath}")
+```
+
+## Export All Files
+
+```{python}
+# Define purposes and their configuration
+export_config = {
+    'HBW':   {'periods': ['PK', 'OK'], 'include_veh': True},
+    'HBO':   {'periods': ['PK', 'OK'], 'include_veh': True},
+    'NHB':   {'periods': ['PK', 'OK'], 'include_veh': True}, # False
+    'HBC':   {'periods': ['Daily'],    'include_veh': True}, # False
+    'HBSch': {'periods': ['Daily'],    'include_veh': True}  # False
+}
+
+for purpose, config in export_config.items():
+    for period in config['periods']:
+        export_calib_file(purpose, period, include_veh_categories=config['include_veh'])
+
+print("\n" + "=" * 80)
+print("✅ EXPORT COMPLETE!")
+print("=" * 80)
+```
