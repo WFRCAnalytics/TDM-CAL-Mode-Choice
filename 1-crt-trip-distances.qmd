@@ -271,3 +271,39 @@ sns.despine()
 plt.tight_layout()
 plt.show()
 ```
+
+## Assign CRT Class for each bins
+
+```{python}
+# Create CRT distance classes
+df_obs_linked['class_CRT'] = np.select(
+    [
+        (df_obs_linked['dist_CRT'].isna()) | (df_obs_linked['dist_CRT'] == 0),
+        (df_obs_linked['dist_CRT'] > 0) & (df_obs_linked['dist_CRT'] <= 10),
+        (df_obs_linked['dist_CRT'] > 10) & (df_obs_linked['dist_CRT'] <= 20),
+        (df_obs_linked['dist_CRT'] > 20) & (df_obs_linked['dist_CRT'] <= 30),
+        (df_obs_linked['dist_CRT'] > 30) & (df_obs_linked['dist_CRT'] <= 40),
+        (df_obs_linked['dist_CRT'] > 40) & (df_obs_linked['dist_CRT'] <= 50),
+        (df_obs_linked['dist_CRT'] > 50) & (df_obs_linked['dist_CRT'] <= 60),
+        (df_obs_linked['dist_CRT'] > 60) & (df_obs_linked['dist_CRT'] <= 70),
+        (df_obs_linked['dist_CRT'] > 70) & (df_obs_linked['dist_CRT'] <= 80),
+        (df_obs_linked['dist_CRT'] > 80)
+    ],
+    [
+        None,
+        'CRT_00',
+        'CRT_01',
+        'CRT_02',
+        'CRT_03',
+        'CRT_04',
+        'CRT_05',
+        'CRT_06',
+        'CRT_07',
+        'CRT_08'
+    ],
+    default=None
+)
+
+# Check the distribution
+df_obs_linked['class_CRT'].value_counts().sort_index()
+```
