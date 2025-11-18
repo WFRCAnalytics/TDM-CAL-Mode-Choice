@@ -404,7 +404,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="import-libraries" class="level2" data-number="1.2">
 <h2 data-number="1.2" class="anchored" data-anchor-id="import-libraries"><span class="header-section-number">1.2</span> Import Libraries</h2>
-<div id="39dad0d2" class="cell" data-execution_count="1">
+<div id="022da203" class="cell" data-execution_count="1">
 <details class="code-fold">
 <summary>Show the code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
@@ -428,7 +428,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="environment-variables" class="level2" data-number="1.3">
 <h2 data-number="1.3" class="anchored" data-anchor-id="environment-variables"><span class="header-section-number">1.3</span> Environment Variables</h2>
-<div id="f711789e" class="cell" data-execution_count="2">
+<div id="2edfe337" class="cell" data-execution_count="2">
 <details class="code-fold">
 <summary>Show the code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>PROJECT_CRS <span class="op">=</span> <span class="st">"EPSG:3566"</span>  <span class="co"># NAD83 / Utah North (ftUS)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -437,7 +437,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="helper-functions" class="level2" data-number="1.4">
 <h2 data-number="1.4" class="anchored" data-anchor-id="helper-functions"><span class="header-section-number">1.4</span> Helper Functions</h2>
-<div id="4aaf6112" class="cell" data-execution_count="3">
+<div id="36d71faf" class="cell" data-execution_count="3">
 <details class="code-fold">
 <summary>Show the code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> fetch_github(</span>
@@ -491,7 +491,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="processed-on-board-survey-data" class="level2" data-number="2.1">
 <h2 data-number="2.1" class="anchored" data-anchor-id="processed-on-board-survey-data"><span class="header-section-number">2.1</span> Processed On-Board Survey Data</h2>
 <p>This dataset is the output from the <a href="https://github.com/WFRCAnalytics/DATA-OBS-Prep-For-TDM">“previous step”</a>, which contains all the calculated access and egress distances and times.</p>
-<div id="e322201f" class="cell" data-execution_count="4">
+<div id="c248d95c" class="cell" data-execution_count="4">
 <details class="code-fold">
 <summary>Show the code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Read Linked UTA On-Board Survey Data directly from GitHub repo</span></span>
@@ -504,7 +504,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>df_obs_linked</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output cell-output-stderr">
-<pre><code>C:\Users\Pukar.Bhandari\AppData\Local\Temp\ipykernel_15724\3078765074.py:7: DtypeWarning:
+<pre><code>C:\Users\Pukar.Bhandari\AppData\Local\Temp\ipykernel_27264\3078765074.py:7: DtypeWarning:
 
 Columns (8,24,32,37,54,132,137,174) have mixed types. Specify dtype option on import or set low_memory=False.
 </code></pre>
@@ -831,7 +831,7 @@ Tip
 <p>Skim matrices were copied from <code>\\ModelAce\ModelAce-E\1 - TDM\1 - Official Release (full run)\v9x\v9.1\v9.1.1\WF-TDM-v9.1.1 - revised-se\Scenarios\OY_2023\4_ModeChoice\1a_Skims</code></p>
 </div>
 </div>
-<div id="766f50cc" class="cell" data-execution_count="5">
+<div id="5417f4c1" class="cell" data-execution_count="5">
 <details class="code-fold">
 <summary>Show the code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define output files to check</span></span>
@@ -864,7 +864,7 @@ Tip
 </section>
 <section id="read-matrices" class="level2" data-number="2.3">
 <h2 data-number="2.3" class="anchored" data-anchor-id="read-matrices"><span class="header-section-number">2.3</span> Read Matrices</h2>
-<div id="15053c36" class="cell" data-execution_count="6">
+<div id="ca0c0e56" class="cell" data-execution_count="6">
 <details class="code-fold">
 <summary>Show the code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Read Matrices as DataFrames</span></span>
@@ -880,7 +880,7 @@ Tip
 <h1 data-number="3"><span class="header-section-number">3</span> Process Data</h1>
 <section id="assign-which-matrix-to-process-for-each-row" class="level2" data-number="3.1">
 <h2 data-number="3.1" class="anchored" data-anchor-id="assign-which-matrix-to-process-for-each-row"><span class="header-section-number">3.1</span> Assign which matrix to process for each row</h2>
-<div id="759f1e40" class="cell" data-execution_count="7">
+<div id="c3477829" class="cell" data-execution_count="7">
 <details class="code-fold">
 <summary>Show the code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a new column called "skim_crt" - only assign when CRT is used</span></span>
@@ -951,7 +951,7 @@ Tip
 </section>
 <section id="calculate-crt-distances" class="level2" data-number="3.2">
 <h2 data-number="3.2" class="anchored" data-anchor-id="calculate-crt-distances"><span class="header-section-number">3.2</span> Calculate CRT Distances</h2>
-<div id="c03c9ddf" class="cell" data-execution_count="8">
+<div id="396f3776" class="cell" data-execution_count="8">
 <details class="code-fold">
 <summary>Show the code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Calculate CRT Distances - vectorized approach</span></span>
@@ -1046,7 +1046,7 @@ Tip
 </div>
 </div>
 </div>
-<div id="4b68cc2b" class="cell" data-execution_count="9">
+<div id="620750be" class="cell" data-execution_count="9">
 <details class="code-fold">
 <summary>Show the code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>df_obs_linked[<span class="st">'dist_CRT'</span>].replace(<span class="dv">0</span>, np.nan).dropna().sort_values()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -1066,7 +1066,7 @@ Tip
 Name: dist_CRT, Length: 1911, dtype: float64</code></pre>
 </div>
 </div>
-<div id="c23d2d4c" class="cell" data-execution_count="10">
+<div id="9676b0a4" class="cell" data-execution_count="10">
 <details class="code-fold">
 <summary>Show the code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Set seaborn style</span></span>

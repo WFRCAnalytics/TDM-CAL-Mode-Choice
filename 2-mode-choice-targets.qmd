@@ -509,15 +509,15 @@ df_hts_linked['PK_OK'] = np.where(
 (
     df_hts_linked[
         (df_hts_linked['model_trip_mode_WFv10'].isin(
-            ["auto_sov", "auto_occ2", "auto_occ3p", "walk-to-transit",
+            ["auto-sov", "auto-occ2", "auto-occ3p", "walk-to-transit",
              "drive-to-transit", "walk", "bike"]
         )) &
         (df_hts_linked['Purp5_text'] == 'HBW')
     ]
     .assign(motorized_category=lambda x: x['model_trip_mode_WFv10'].map({
-        'auto_sov'         : 'motor',
-        'auto_occ2'        : 'motor',
-        'auto_occ3p'       : 'motor',
+        'auto-sov'         : 'motor',
+        'auto-occ2'        : 'motor',
+        'auto-occ3p'       : 'motor',
         'walk-to-transit'  : 'motor',
         'drive-to-transit' : 'motor',
         'walk'             : 'nonmotor',
@@ -664,7 +664,7 @@ df_hts_nonmotor
 ```{python}
 # Auto trips from HTS
 df_hts_auto = (
-    df_hts_linked[df_hts_linked['model_trip_mode_WFv10'].isin(['auto_sov', 'auto_occ2', 'auto_occ3p'])]
+    df_hts_linked[df_hts_linked['model_trip_mode_WFv10'].isin(['auto-sov', 'auto-occ2', 'auto-occ3p'])]
     [['Veh_Cat3p', 'Purp5_text', 'PK_OK', 'model_trip_mode_WFv10', 'trip_weight']]
     .rename(columns={'trip_weight': 'weight', 'model_trip_mode_WFv10': 'mode'})
 )
@@ -785,9 +785,9 @@ print("4. AUTO TRIPS: DRIVE ALONE VS SHARED RIDES")
 print("=" * 60)
 
 auto_ride_mapping = {
-    'auto_sov'   : 'alone',
-    'auto_occ2'  : 'shared',
-    'auto_occ3p' : 'shared'
+    'auto-sov'   : 'alone',
+    'auto-occ2'  : 'shared',
+    'auto-occ3p' : 'shared'
 }
 
 df_auto_riders = calculate_categorical_shares(
@@ -795,7 +795,7 @@ df_auto_riders = calculate_categorical_shares(
     category_col='model_trip_mode_WFv10',
     weight_col='trip_weight',
     group_cols=['Veh_Cat3p', 'Purp5_text', 'PK_OK'],
-    filter_condition='model_trip_mode_WFv10 in ["auto_sov", "auto_occ2", "auto_occ3p"]',
+    filter_condition='model_trip_mode_WFv10 in ["auto-sov", "auto-occ2", "auto-occ3p"]',
     category_mapping=auto_ride_mapping,
     prefix='calib_share'
 )
@@ -816,8 +816,8 @@ print("5. SHARED RIDER BY NUMBER OF PEOPLE")
 print("=" * 60)
 
 shared_ride_mapping = {
-    'auto_occ2' : 'sr2',
-    'auto_occ3p': 'sr3'
+    'auto-occ2' : 'sr2',
+    'auto-occ3p': 'sr3'
 }
 
 df_shared_by_person = calculate_categorical_shares(
@@ -825,7 +825,7 @@ df_shared_by_person = calculate_categorical_shares(
     category_col='model_trip_mode_WFv10',
     weight_col='trip_weight',
     group_cols=['Veh_Cat3p', 'Purp5_text', 'PK_OK'],
-    filter_condition='model_trip_mode_WFv10 in ["auto_occ2", "auto_occ3p"]',
+    filter_condition='model_trip_mode_WFv10 in ["auto-occ2", "auto-occ3p"]',
     category_mapping=shared_ride_mapping,
     prefix='calib_share'
 )
