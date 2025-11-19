@@ -245,16 +245,16 @@ omx_d8_ok = pd.DataFrame(omx.open_file(r"_data\Skims\omx\skm_d8_Ok.omx")['D8'])
 # Create a new column called "skim_crt" - only assign when CRT is used
 df_obs_linked['skim_crt'] = np.select(
     [
-        (df_obs_linked[['FirstMode', 'SecndMode', 'ThirdMode', 'LastMode']].eq('CRT').any(axis=1)) &
+        (df_obs_linked[['FirstMode', 'SecndMode', 'ThirdMode', 'FourthMode', 'FifthMode', 'LastMode']].eq('CRT').any(axis=1)) &
         (df_obs_linked['Ac_Mode2_Model'] == 'Walk') & (df_obs_linked['Period'].isin(['AM', 'PM'])),
 
-        (df_obs_linked[['FirstMode', 'SecndMode', 'ThirdMode', 'LastMode']].eq('CRT').any(axis=1)) &
+        (df_obs_linked[['FirstMode', 'SecndMode', 'ThirdMode', 'FourthMode', 'FifthMode', 'LastMode']].eq('CRT').any(axis=1)) &
         (df_obs_linked['Ac_Mode2_Model'] == 'Walk') & (df_obs_linked['Period'].isin(['MD', 'EV'])),
 
-        (df_obs_linked[['FirstMode', 'SecndMode', 'ThirdMode', 'LastMode']].eq('CRT').any(axis=1)) &
+        (df_obs_linked[['FirstMode', 'SecndMode', 'ThirdMode', 'FourthMode', 'FifthMode', 'LastMode']].eq('CRT').any(axis=1)) &
         (df_obs_linked['Ac_Mode2_Model'] == 'Drive') & (df_obs_linked['Period'].isin(['AM', 'PM'])),
 
-        (df_obs_linked[['FirstMode', 'SecndMode', 'ThirdMode', 'LastMode']].eq('CRT').any(axis=1)) &
+        (df_obs_linked[['FirstMode', 'SecndMode', 'ThirdMode', 'FourthMode', 'FifthMode', 'LastMode']].eq('CRT').any(axis=1)) &
         (df_obs_linked['Ac_Mode2_Model'] == 'Drive') & (df_obs_linked['Period'].isin(['MD', 'EV']))
     ],
     [
@@ -310,7 +310,7 @@ crt_dist_count = (
     .sort_values('dist_CRT')
 )
 
-%view crt_dist_count
+crt_dist_count
 ```
 
 ```{python}
@@ -326,8 +326,8 @@ plt.figure(figsize=(10, 6))
 
 # Filter relevant data
 df_valid = df_obs_linked[
-    (df_obs_linked['dist_CRT'].notna()) & # filter out NaNs and
-    (df_obs_linked['dist_CRT'] > 0) # only non-zero distances
+    (df_obs_linked['dist_CRT'].notna()) #& # filter out NaNs and
+    # (df_obs_linked['dist_CRT'] > 0) # only non-zero distances
 ]
 
 # Create histogram with KDE
@@ -410,6 +410,8 @@ df_plot[df_plot.filter(regex='(PREV|NEXT|STOP).*(_LAT|_ON_BUS|_OFF_BUS)').column
 ```
 
 ```{python}
+#| eval: false
+
 import folium
 from folium import Marker, CircleMarker, FeatureGroup, PolyLine
 import pandas as pd
@@ -423,26 +425,26 @@ MODE_STYLES = {
     4: {'color': '#00508b', 'weight': 3},   # LCL (Local Bus) - UTA Blue
     5: {'color': '#FF6B35', 'weight': 3},   # COR (Core Bus)
     6: {'color': '#6fb74d', 'weight': 3},   # EXP (Express Bus)
-    7: {'color': '#ce132d', 'weight': 6},   # LRT (Light Rail) - UTA Red
-    8: {'color': '#9c4392', 'weight': 8},   # CRT (Commuter Rail) - UTA Green
+    7: {'color': '#ce132d', 'weight': 4},   # LRT (Light Rail) - UTA Red
+    8: {'color': '#9c4392', 'weight': 6},   # CRT (Commuter Rail) - UTA Green
     9: {'color': '#007dbb', 'weight': 5}    # BRT (Bus Rapid Transit)
 }
 
 ACCESS_EGRESS_STYLES = {
-    'Walk': {'color': '#898a8d', 'weight': 1.5},
+    'Walk': {'color': '#898a8d', 'weight': 2},
     'KNR': {'color': '#FFA500', 'weight': 2},
     'PNR': {'color': '#FF6B35', 'weight': 2},
     'Drive': {'color': '#FF6B35', 'weight': 2}
 }
 
-TRANSFER_WALK_STYLE = {'color': '#898a8d', 'weight': 1.5}
+TRANSFER_WALK_STYLE = {'color': '#898a8d', 'weight': 2}
 SNAP_LINE_STYLE = {'color': '#00CED1', 'weight': 2, 'dash_array': '5, 5'}  # Dashed cyan for snap connections
 SURVEYED_TRIP_WEIGHT_MULTIPLIER = 1.5
 
 # ============================================================================
 # SETUP
 # ============================================================================
-RESPONSE_ID = 11227
+RESPONSE_ID = 30311
 
 df_plot = df_obs_linked[df_obs_linked["ID"] == RESPONSE_ID].iloc[0]
 
@@ -461,6 +463,7 @@ m = folium.Map(location=[center_lat, center_lon], zoom_start=13, tiles='OpenStre
 
 # Create feature groups
 fg_taz = FeatureGroup(name='Relevant TAZs', show=True)
+fg_all_nodes = FeatureGroup(name='All Transit Network Nodes', show=False)
 fg_stops = FeatureGroup(name='Transit Stops Used', show=True)
 fg_snapped_stops = FeatureGroup(name='Snapped Stop Nodes (from Network)', show=True)
 fg_snap_connections = FeatureGroup(name='Snap Connections', show=True)
@@ -499,6 +502,37 @@ if pd.notna(df_plot['a_TAZID']):
             },
             tooltip=f"Attraction TAZ: {df_plot['a_TAZID']}"
         ).add_to(fg_taz)
+
+# ============================================================================
+# ADD ALL TRANSIT NETWORK NODES (BACKGROUND LAYER)
+# ============================================================================
+# Get unique node geometries (since same node can serve multiple modes)
+unique_nodes = (
+    df_stop_nodes
+    .groupby('N')
+    .agg(
+        geometry=('geometry', 'first'),
+        MODE=('MODE', lambda s: ', '.join(str(m) for m in sorted(s.dropna().unique())))
+    )
+    .reset_index()
+)
+
+unique_nodes_gdf = gpd.GeoDataFrame(unique_nodes, geometry='geometry', crs=df_stop_nodes.crs)
+unique_nodes_gdf_wgs84 = unique_nodes_gdf.to_crs('EPSG:4326')
+
+# Add all nodes as small gray circles
+for _, node in unique_nodes_gdf_wgs84.iterrows():
+    folium.CircleMarker(
+        location=[node.geometry.y, node.geometry.x],
+        radius=4,
+        color='#444444',
+        fill=True,
+        fillColor='#444444',
+        fillOpacity=0.75,
+        weight=0.75,
+        popup=f"Node: {node['N']}\nMode: {node['MODE']}",
+        tooltip=f"Node {node['N']}"
+    ).add_to(fg_all_nodes)
 
 # ============================================================================
 # HELPER FUNCTIONS
@@ -826,10 +860,11 @@ if pd.notna(df_plot['a_lat']) and pd.notna(df_plot['a_lon']):
 # ADD LAYERS
 # ============================================================================
 fg_taz.add_to(m)
+fg_all_nodes.add_to(m)  # Add all network nodes layer
 fg_trip_lines.add_to(m)
 fg_snap_connections.add_to(m)
 fg_stops.add_to(m)
-fg_snapped_stops.add_to(m)
+fg_snapped_stops.add_to(m)  # Snapped nodes on top
 fg_addresses.add_to(m)
 
 folium.LayerControl(collapsed=False).add_to(m)
