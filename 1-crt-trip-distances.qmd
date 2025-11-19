@@ -33,6 +33,7 @@ import seaborn as sns
 import geopandas as gpd
 from pathlib import Path
 import glob
+from dbfread import DBF
 import re
 import os
 import requests
@@ -97,6 +98,19 @@ def fetch_github(
 
 # Load Data
 
+## TAZ Shapefile
+
+```{python}
+gdf_taz_v10 = gpd.read_file(
+    r"_data/TAZ/WFv910_TAZ.shp"
+).to_crs(PROJECT_CRS)
+```
+
+```{python}
+#| eval: false
+gdf_taz_v10.explore()
+```
+
 ## Processed On-Board Survey Data
 
 This dataset is the output from the ["previous step"](https://github.com/WFRCAnalytics/DATA-OBS-Prep-For-TDM), which contains all the calculated access and egress distances and times.
@@ -112,6 +126,73 @@ df_obs_linked = pd.read_csv(io.StringIO(response.text))
 df_obs_linked
 ```
 
+## Transit Network Nodes
+
+The transit network comes from the travel demand model's master network. This network contains all possible locations where transit vehicles can stop. We need to match survey stop locations to these official network nodes to calculate accurate walk distances from the model's non-transit links.
+
+### Load MasterNetwork Nodes
+
+The MasterNetwork contains all nodes in the regional transportation network - roadway intersections, transit stops, park-and-ride locations, etc. We load the complete network first, then filter to just transit-related nodes.
+
+```{python}
+# Load all nodes from MasterNetwork
+gdf_masternet_nodes = gpd.read_file(
+    # Source: \\ModelAce\ModelAce-E\1 - TDM\1 - Official Release (full run)\v9x\v9.1\v9.1.1\WF-TDM-v9.1.1 - revised-se\Scenarios\OY_2023\0_InputProcessing\ScenarioNet
+    r"_data/ScenarioNet/WFv911-revised-se_OY_2023 - Node.shp"
+).to_crs(PROJECT_CRS)
+```
+
+```{python}
+#| eval: false
+gdf_masternet_nodes.explore()
+```
+
+### Filter to Transit Stop Nodes
+
+Not all nodes in the MasterNetwork are transit stops. The c_StopsAllModes.dbf file contains a list of node IDs that represent actual transit stops. We filter the network to only these nodes, giving us the set of locations where we can calculate walk access/egress distances.
+
+```{python}
+#| eval: false
+#| echo: false
+
+# # Read a list of just transit nodes
+# df_stop_nodes_list = pd.DataFrame(
+#     # Source: "\\ModelAce\ModelAce-E\1 - TDM\1 - Official Release (full run)\v9x\v9.1\v9.1.1\WF-TDM-v9.1.1 - revised-se\Scenarios\OY_2023\0_InputProcessing\c_StopsAllModes.dbf"
+#     DBF(r"_data/Stops/c_StopsAllModes.dbf")
+# )
+```
+
+```{python}
+# Read all mode-specific stop files and combine into one dataframe
+df_stop_nodes_list = pd.concat(
+    # Source: "\\ModelAce\ModelAce-E\1 - TDM\1 - Official Release (full run)\v9x\v9.1\v9.1.1\WF-TDM-v9.1.1 - revised-se\Scenarios\OY_2023\0_InputProcessing\"
+    [pd.DataFrame(DBF(file)).assign(MODE=int(re.search(r'Mode(\d+)', file).group(1)))
+     for file in glob.glob(r'_data/Stops/c_StopsMode[4-9].dbf')],
+    ignore_index=True
+)
+
+df_stop_nodes_list['N'] = df_stop_nodes_list['N'].astype('Int64')
+```
+
+```{python}
+df_stop_nodes_list
+```
+
+```{python}
+# Join to get geometry for each N-MODE combination
+df_stop_nodes = gdf_masternet_nodes[['N', 'geometry']].merge(
+    df_stop_nodes_list[['N', 'MODE']],
+    on='N',
+    how='inner',
+    validate="1:m" # multiple stops (by mode) can have same stop id and geometry
+)
+```
+
+```{python}
+#| eval: false
+df_stop_nodes.explore()
+```
+
 ## Transit Trip Matrix
 
 ### Convert Matrix Format using `_ConvertMatToOmx.s`.
@@ -119,7 +200,7 @@ df_obs_linked
 This only needs to run once.
 
 ::: {.callout-tip}
-Skim matrices were copied from `\\ModelAce\ModelAce-E\1 - TDM\1 - Official Release (full run)\v9x\v9.1\v9.1.1\WF-TDM-v9.1.1 - revised-se\Scenarios\OY_2023\4_ModeChoice\1a_Skims`
+Skim matrices were copied from `\\ModelAce\ModelAce-E\1 - TDM\1 - Official Release (full run)\v9x\v9.1\v9.1.1\WF-TDM-v9.1.1 - revised-se\Scenarios\OY_2023\4_ModeChoice\1a_Skims` (For this exact run, skim matrices were used from modified NTL runs.)
 :::
 
 ```{python}
@@ -222,7 +303,18 @@ df_obs_linked[['dist_CRT']]
 ```
 
 ```{python}
-df_obs_linked['dist_CRT'].replace(0, np.nan).dropna().sort_values()
+crt_dist_count = (
+    df_obs_linked[['ID', 'Ac_Mode2_Model', 'PK_OK', 'p_TAZID', 'a_TAZID', 'dist_CRT']]
+    # .replace(0, np.nan)
+    .dropna()
+    .sort_values('dist_CRT')
+)
+
+%view crt_dist_count
+```
+
+```{python}
+(df_obs_linked[df_obs_linked['dist_CRT'] == 0]['trip_weight'].sum() / df_obs_linked['trip_weight'].sum()) * 100
 ```
 
 ```{python}
@@ -306,4 +398,480 @@ df_obs_linked['class_CRT'] = np.select(
 
 # Check the distribution
 df_obs_linked['class_CRT'].value_counts().sort_index()
+```
+
+```{python}
+df_obs_linked.filter(regex='(_LAT|_LONG)$').columns
+```
+
+```{python}
+# What columns have non-null values for this trip?
+df_plot[df_plot.filter(regex='(PREV|NEXT|STOP).*(_LAT|_ON_BUS|_OFF_BUS)').columns].notna()
+```
+
+```{python}
+import folium
+from folium import Marker, CircleMarker, FeatureGroup, PolyLine
+import pandas as pd
+import numpy as np
+
+# ============================================================================
+# COLOR AND STYLE CONFIGURATION
+# ============================================================================
+MODE_STYLES = {
+    1: {'color': '#5b80a3', 'weight': 2},   # MT (Microtransit)
+    4: {'color': '#00508b', 'weight': 3},   # LCL (Local Bus) - UTA Blue
+    5: {'color': '#FF6B35', 'weight': 3},   # COR (Core Bus)
+    6: {'color': '#6fb74d', 'weight': 3},   # EXP (Express Bus)
+    7: {'color': '#ce132d', 'weight': 6},   # LRT (Light Rail) - UTA Red
+    8: {'color': '#9c4392', 'weight': 8},   # CRT (Commuter Rail) - UTA Green
+    9: {'color': '#007dbb', 'weight': 5}    # BRT (Bus Rapid Transit)
+}
+
+ACCESS_EGRESS_STYLES = {
+    'Walk': {'color': '#898a8d', 'weight': 1.5},
+    'KNR': {'color': '#FFA500', 'weight': 2},
+    'PNR': {'color': '#FF6B35', 'weight': 2},
+    'Drive': {'color': '#FF6B35', 'weight': 2}
+}
+
+TRANSFER_WALK_STYLE = {'color': '#898a8d', 'weight': 1.5}
+SNAP_LINE_STYLE = {'color': '#00CED1', 'weight': 2, 'dash_array': '5, 5'}  # Dashed cyan for snap connections
+SURVEYED_TRIP_WEIGHT_MULTIPLIER = 1.5
+
+# ============================================================================
+# SETUP
+# ============================================================================
+RESPONSE_ID = 11227
+
+df_plot = df_obs_linked[df_obs_linked["ID"] == RESPONSE_ID].iloc[0]
+
+# Determine center
+if pd.notna(df_plot['p_lat']) and pd.notna(df_plot['p_lon']):
+    center_lat, center_lon = df_plot['p_lat'], df_plot['p_lon']
+elif pd.notna(df_plot['a_lat']) and pd.notna(df_plot['a_lon']):
+    center_lat, center_lon = df_plot['a_lat'], df_plot['a_lon']
+elif pd.notna(df_plot['HOME_ADDRESS_LAT']) and pd.notna(df_plot['HOME_ADDRESS_LONG']):
+    center_lat, center_lon = df_plot['HOME_ADDRESS_LAT'], df_plot['HOME_ADDRESS_LONG']
+else:
+    center_lat, center_lon = 40.7608, -111.8910
+    print("Warning: No valid coordinates found, using default center")
+
+m = folium.Map(location=[center_lat, center_lon], zoom_start=13, tiles='OpenStreetMap')
+
+# Create feature groups
+fg_taz = FeatureGroup(name='Relevant TAZs', show=True)
+fg_stops = FeatureGroup(name='Transit Stops Used', show=True)
+fg_snapped_stops = FeatureGroup(name='Snapped Stop Nodes (from Network)', show=True)
+fg_snap_connections = FeatureGroup(name='Snap Connections', show=True)
+fg_addresses = FeatureGroup(name='Addresses', show=True)
+fg_trip_lines = FeatureGroup(name='Trip Sequence', show=True)
+
+# ============================================================================
+# SHOW RELEVANT TAZs
+# ============================================================================
+if pd.notna(df_plot['p_TAZID']):
+    p_taz = gdf_taz_v10[gdf_taz_v10['TAZID'] == df_plot['p_TAZID']]
+    if len(p_taz) > 0:
+        p_geojson = p_taz.to_crs('EPSG:4326').__geo_interface__
+        folium.GeoJson(
+            p_geojson,
+            style_function=lambda x: {
+                'fillColor': 'darkgreen',
+                'color': 'darkgreen',
+                'weight': 2,
+                'fillOpacity': 0.15
+            },
+            tooltip=f"Production TAZ: {df_plot['p_TAZID']}"
+        ).add_to(fg_taz)
+
+if pd.notna(df_plot['a_TAZID']):
+    a_taz = gdf_taz_v10[gdf_taz_v10['TAZID'] == df_plot['a_TAZID']]
+    if len(a_taz) > 0:
+        a_geojson = a_taz.to_crs('EPSG:4326').__geo_interface__
+        folium.GeoJson(
+            a_geojson,
+            style_function=lambda x: {
+                'fillColor': 'darkblue',
+                'color': 'darkblue',
+                'weight': 2,
+                'fillOpacity': 0.15
+            },
+            tooltip=f"Attraction TAZ: {df_plot['a_TAZID']}"
+        ).add_to(fg_taz)
+
+# ============================================================================
+# HELPER FUNCTIONS
+# ============================================================================
+def get_mode_name(mode_num):
+    mode_names = {
+        1: 'MT (Microtransit)',
+        4: 'LCL (Local)',
+        5: 'COR (Corridor)',
+        6: 'EXP (Express)',
+        7: 'LRT (Light Rail)',
+        8: 'CRT (FrontRunner)',
+        9: 'BRT (Rapid Transit)'
+    }
+    return mode_names.get(mode_num, f'Mode {mode_num}')
+
+def get_mode_color(mode_num):
+    return MODE_STYLES.get(mode_num, {}).get('color', '#666666')
+
+def get_mode_weight(mode_num):
+    return MODE_STYLES.get(mode_num, {}).get('weight', 3)
+
+def add_line_segment(coords_list, color, weight, dash_array, label, popup_text, feature_group):
+    valid_coords = []
+    for coord in coords_list:
+        if coord is not None and len(coord) == 2:
+            lat, lon = coord
+            if pd.notna(lat) and pd.notna(lon):
+                valid_coords.append([lat, lon])
+
+    if len(valid_coords) >= 2:
+        folium.PolyLine(
+            locations=valid_coords,
+            color=color,
+            weight=weight,
+            opacity=0.8,
+            dash_array=dash_array,
+            popup=popup_text,
+            tooltip=label
+        ).add_to(feature_group)
+        return True
+    return False
+
+def add_stop_marker(lat, lon, label, mode_num, feature_group):
+    if pd.notna(lat) and pd.notna(lon):
+        folium.CircleMarker(
+            location=[lat, lon],
+            radius=6,
+            color=get_mode_color(mode_num),
+            fill=True,
+            fillColor=get_mode_color(mode_num),
+            fillOpacity=0.9,
+            popup=label,
+            tooltip=label
+        ).add_to(feature_group)
+
+# ============================================================================
+# BUILD TRIP SEQUENCE
+# ============================================================================
+is_pa = df_plot['PA_AP'] == 'PA'
+trip_sequence = []
+
+if is_pa:
+    segments = [
+        ('PREV_TRAN_1', 'Modefrom1', 'Transfer 1 (from origin)'),
+        ('PREV_TRAN_2', 'Modefrom2', 'Transfer 2 (from origin)'),
+        ('PREV_TRAN_3', 'Modefrom3', 'Transfer 3 (from origin)'),
+        ('STOP', 'Mode_Fin', 'SURVEYED TRIP'),
+        ('NEXT_TRAN_1', 'Modeto1', 'Transfer 1 (to destination)'),
+        ('NEXT_TRAN_2', 'Modeto2', 'Transfer 2 (to destination)'),
+        ('NEXT_TRAN_3', 'Modeto3', 'Transfer 3 (to destination)'),
+    ]
+else:
+    segments = [
+        ('NEXT_TRAN_3', 'Modeto3', 'Transfer 3'),
+        ('NEXT_TRAN_2', 'Modeto2', 'Transfer 2'),
+        ('NEXT_TRAN_1', 'Modeto1', 'Transfer 1'),
+        ('STOP', 'Mode_Fin', 'SURVEYED TRIP'),
+        ('PREV_TRAN_3', 'Modefrom3', 'Transfer 1'),
+        ('PREV_TRAN_2', 'Modefrom2', 'Transfer 2'),
+        ('PREV_TRAN_1', 'Modefrom1', 'Transfer 3'),
+    ]
+
+for prefix, mode_col, label in segments:
+    if prefix == 'STOP':
+        if is_pa:
+            on_lat = df_plot.get('STOP_ON_LAT')
+            on_lon = df_plot.get('STOP_ON_LONG')
+            off_lat = df_plot.get('STOP_OFF_LAT')
+            off_lon = df_plot.get('STOP_OFF_LONG')
+        else:
+            on_lat = df_plot.get('STOP_OFF_LAT')
+            on_lon = df_plot.get('STOP_OFF_LONG')
+            off_lat = df_plot.get('STOP_ON_LAT')
+            off_lon = df_plot.get('STOP_ON_LONG')
+    else:
+        if is_pa:
+            on_lat = df_plot.get(f'{prefix}_ON_BUS_LAT')
+            on_lon = df_plot.get(f'{prefix}_ON_BUS_LONG')
+            off_lat = df_plot.get(f'{prefix}_OFF_BUS_LAT')
+            off_lon = df_plot.get(f'{prefix}_OFF_BUS_LONG')
+        else:
+            on_lat = df_plot.get(f'{prefix}_OFF_BUS_LAT')
+            on_lon = df_plot.get(f'{prefix}_OFF_BUS_LONG')
+            off_lat = df_plot.get(f'{prefix}_ON_BUS_LAT')
+            off_lon = df_plot.get(f'{prefix}_ON_BUS_LONG')
+
+    mode_num = df_plot.get(mode_col)
+
+    if pd.notna(on_lat) and pd.notna(off_lat) and pd.notna(mode_num):
+        trip_sequence.append({
+            'on_lat': on_lat,
+            'on_lon': on_lon,
+            'off_lat': off_lat,
+            'off_lon': off_lon,
+            'mode_num': int(mode_num),
+            'mode_name': get_mode_name(mode_num),
+            'label': label,
+            'is_current': prefix == 'STOP'
+        })
+
+# ============================================================================
+# ADD SNAPPED NETWORK STOPS
+# ============================================================================
+# Get snapped stop nodes from df_stop_nodes
+snapped_nodes = []
+
+# Production Stop (Access - where trip starts from network perspective)
+if pd.notna(df_plot['p_Stop_N']):
+    p_stop_matches = df_stop_nodes[df_stop_nodes['N'] == df_plot['p_Stop_N']]
+    if len(p_stop_matches) > 0:
+        node = p_stop_matches.iloc[0]
+        node_geom = node.geometry
+        if df_stop_nodes.crs != 'EPSG:4326':
+            node_gdf = gpd.GeoDataFrame([node], geometry='geometry', crs=df_stop_nodes.crs)
+            node_geom = node_gdf.to_crs('EPSG:4326').iloc[0].geometry
+
+        modes = p_stop_matches['MODE'].unique()
+        mode_names = [get_mode_name(m) for m in modes]
+
+        folium.Marker(
+            location=[node_geom.y, node_geom.x],
+            icon=folium.Icon(color='green', icon='circle', prefix='fa'),
+            popup=f"Access Stop Node: {df_plot['p_Stop_N']}<br>Modes: {', '.join(mode_names)}",
+            tooltip=f"Network Node {df_plot['p_Stop_N']} (Access)"
+        ).add_to(fg_snapped_stops)
+
+        snapped_nodes.append({
+            'type': 'access',
+            'lat': node_geom.y,
+            'lon': node_geom.x,
+            'node_id': df_plot['p_Stop_N']
+        })
+
+# Attraction Stop (Egress - where trip ends from network perspective)
+if pd.notna(df_plot['a_Stop_N']):
+    a_stop_matches = df_stop_nodes[df_stop_nodes['N'] == df_plot['a_Stop_N']]
+    if len(a_stop_matches) > 0:
+        node = a_stop_matches.iloc[0]
+        node_geom = node.geometry
+        if df_stop_nodes.crs != 'EPSG:4326':
+            node_gdf = gpd.GeoDataFrame([node], geometry='geometry', crs=df_stop_nodes.crs)
+            node_geom = node_gdf.to_crs('EPSG:4326').iloc[0].geometry
+
+        modes = a_stop_matches['MODE'].unique()
+        mode_names = [get_mode_name(m) for m in modes]
+
+        folium.Marker(
+            location=[node_geom.y, node_geom.x],
+            icon=folium.Icon(color='blue', icon='circle', prefix='fa'),
+            popup=f"Egress Stop Node: {df_plot['a_Stop_N']}<br>Modes: {', '.join(mode_names)}",
+            tooltip=f"Network Node {df_plot['a_Stop_N']} (Egress)"
+        ).add_to(fg_snapped_stops)
+
+        snapped_nodes.append({
+            'type': 'egress',
+            'lat': node_geom.y,
+            'lon': node_geom.x,
+            'node_id': df_plot['a_Stop_N']
+        })
+
+# ============================================================================
+# DRAW TRIP WITH SNAP CONNECTIONS
+# ============================================================================
+
+# 1. Access segment (Production Address → Snapped Access Stop)
+if len(snapped_nodes) > 0 and snapped_nodes[0]['type'] == 'access':
+    access_node = snapped_nodes[0]
+    access_mode = df_plot['Ac_Mode3_Model']
+    access_style = ACCESS_EGRESS_STYLES.get(access_mode, {'color': '#666666', 'weight': 3})
+
+    add_line_segment(
+        [[df_plot['p_lat'], df_plot['p_lon']],
+         [access_node['lat'], access_node['lon']]],
+        color=access_style['color'],
+        weight=access_style['weight'],
+        dash_array='8, 4',
+        label=f'Access: {access_mode}',
+        popup_text=f"Access: {access_mode}<br>To Network Node: {access_node['node_id']}<br>Distance: {df_plot.get('access_dist', 'N/A'):.2f} mi",
+        feature_group=fg_trip_lines
+    )
+
+    # Snap connection (Access Node → First Transit Stop)
+    if len(trip_sequence) > 0:
+        first_stop = trip_sequence[0]
+        add_line_segment(
+            [[access_node['lat'], access_node['lon']],
+             [first_stop['on_lat'], first_stop['on_lon']]],
+            color=SNAP_LINE_STYLE['color'],
+            weight=SNAP_LINE_STYLE['weight'],
+            dash_array=SNAP_LINE_STYLE['dash_array'],
+            label='Access Snap Connection',
+            popup_text=f"Connection: Network Node → Surveyed Stop",
+            feature_group=fg_snap_connections
+        )
+
+# 2. Transit segments and transfers
+for i, segment in enumerate(trip_sequence):
+    add_stop_marker(
+        segment['on_lat'],
+        segment['on_lon'],
+        f"Board: {segment['label']}<br>{segment['mode_name']}",
+        segment['mode_num'],
+        fg_stops
+    )
+
+    base_weight = get_mode_weight(segment['mode_num'])
+    weight = int(base_weight * SURVEYED_TRIP_WEIGHT_MULTIPLIER) if segment['is_current'] else base_weight
+
+    add_line_segment(
+        [[segment['on_lat'], segment['on_lon']],
+         [segment['off_lat'], segment['off_lon']]],
+        color=get_mode_color(segment['mode_num']),
+        weight=weight,
+        dash_array=None,
+        label=f"{segment['label']}: {segment['mode_name']}",
+        popup_text=f"{segment['label']}<br>{segment['mode_name']}" +
+                   ("<br><b>★ SURVEYED TRIP ★</b>" if segment['is_current'] else ""),
+        feature_group=fg_trip_lines
+    )
+
+    add_stop_marker(
+        segment['off_lat'],
+        segment['off_lon'],
+        f"Alight: {segment['label']}<br>{segment['mode_name']}",
+        segment['mode_num'],
+        fg_stops
+    )
+
+    if i < len(trip_sequence) - 1:
+        next_segment = trip_sequence[i + 1]
+        add_line_segment(
+            [[segment['off_lat'], segment['off_lon']],
+             [next_segment['on_lat'], next_segment['on_lon']]],
+            color=TRANSFER_WALK_STYLE['color'],
+            weight=TRANSFER_WALK_STYLE['weight'],
+            dash_array='2, 6',
+            label='Transfer Walk',
+            popup_text='Walking between stops',
+            feature_group=fg_trip_lines
+        )
+
+# 3. Egress segment (Last Transit Stop → Snapped Egress Stop → Attraction Address)
+if len(trip_sequence) > 0:
+    last_stop = trip_sequence[-1]
+    egress_mode = df_plot['Eg_Mode3_Model']
+    egress_style = ACCESS_EGRESS_STYLES.get(egress_mode, {'color': '#666666', 'weight': 3})
+
+    # Find egress node
+    egress_node = next((n for n in snapped_nodes if n['type'] == 'egress'), None)
+
+    if egress_node:
+        # Snap connection (Last Transit Stop → Egress Node)
+        add_line_segment(
+            [[last_stop['off_lat'], last_stop['off_lon']],
+             [egress_node['lat'], egress_node['lon']]],
+            color=SNAP_LINE_STYLE['color'],
+            weight=SNAP_LINE_STYLE['weight'],
+            dash_array=SNAP_LINE_STYLE['dash_array'],
+            label='Egress Snap Connection',
+            popup_text=f"Connection: Surveyed Stop → Network Node",
+            feature_group=fg_snap_connections
+        )
+
+        # Egress walk (Egress Node → Attraction Address)
+        add_line_segment(
+            [[egress_node['lat'], egress_node['lon']],
+             [df_plot['a_lat'], df_plot['a_lon']]],
+            color=egress_style['color'],
+            weight=egress_style['weight'],
+            dash_array='8, 4',
+            label=f'Egress: {egress_mode}',
+            popup_text=f"Egress: {egress_mode}<br>From Network Node: {egress_node['node_id']}<br>Distance: {df_plot.get('egress_dist', 'N/A'):.2f} mi",
+            feature_group=fg_trip_lines
+        )
+
+# ============================================================================
+# ADD ADDRESS MARKERS
+# ============================================================================
+if pd.notna(df_plot['HOME_ADDRESS_LAT']) and pd.notna(df_plot['HOME_ADDRESS_LONG']):
+    folium.Marker(
+        location=[df_plot['HOME_ADDRESS_LAT'], df_plot['HOME_ADDRESS_LONG']],
+        icon=folium.Icon(color='red', icon='home', prefix='fa'),
+        popup='Home Address',
+        tooltip='Home'
+    ).add_to(fg_addresses)
+
+if pd.notna(df_plot['p_lat']) and pd.notna(df_plot['p_lon']):
+    folium.Marker(
+        location=[df_plot['p_lat'], df_plot['p_lon']],
+        icon=folium.Icon(color='darkgreen', icon='play', prefix='fa'),
+        popup=f"Production Address<br>TAZ: {df_plot['p_TAZID']}<br>Purpose: {df_plot['Purp5_text']}",
+        tooltip='Production (Trip Start)'
+    ).add_to(fg_addresses)
+
+if pd.notna(df_plot['a_lat']) and pd.notna(df_plot['a_lon']):
+    folium.Marker(
+        location=[df_plot['a_lat'], df_plot['a_lon']],
+        icon=folium.Icon(color='darkblue', icon='stop', prefix='fa'),
+        popup=f"Attraction Address<br>TAZ: {df_plot['a_TAZID']}<br>Purpose: {df_plot['Purp5_text']}",
+        tooltip='Attraction (Trip End)'
+    ).add_to(fg_addresses)
+
+# ============================================================================
+# ADD LAYERS
+# ============================================================================
+fg_taz.add_to(m)
+fg_trip_lines.add_to(m)
+fg_snap_connections.add_to(m)
+fg_stops.add_to(m)
+fg_snapped_stops.add_to(m)
+fg_addresses.add_to(m)
+
+folium.LayerControl(collapsed=False).add_to(m)
+
+# ============================================================================
+# ADD TRIP SUMMARY
+# ============================================================================
+mode_sequence_html = ""
+for i, seg in enumerate(trip_sequence, 1):
+    color = get_mode_color(seg['mode_num'])
+    star = " ★" if seg['is_current'] else ""
+    mode_sequence_html += f'{i}. <span style="color:{color}">●</span> {seg["mode_name"]}{star}<br>'
+
+trip_summary = f"""
+<div style="position: fixed;
+     top: 10px; left: 60px; width: 340px;
+     background-color: white; border:2px solid grey; z-index:9999;
+     font-size:13px; padding: 10px; font-family: Arial, sans-serif;">
+<b style="font-size: 15px;">Trip ID: {df_plot['ID']}</b><br>
+<hr style="margin: 5px 0;">
+<b>Trip Details:</b><br>
+Direction: {df_plot['PA_AP']} (P → A)<br>
+Purpose: {df_plot['Purp5_text']}<br>
+Period: {df_plot['Period']}<br>
+Linked Mode: {df_plot['Linked_Mode_txt']}<br>
+Total Transfers: {df_plot['Total_Xfer']}<br>
+<hr style="margin: 5px 0;">
+<b>Access/Egress:</b><br>
+Access: {df_plot['Ac_Mode3_Model']} ({df_plot.get('access_dist', 'N/A'):.2f} mi)<br>
+Egress: {df_plot['Eg_Mode3_Model']} ({df_plot.get('egress_dist', 'N/A'):.2f} mi)<br>
+<hr style="margin: 5px 0;">
+<b>Transit Sequence:</b><br>
+{mode_sequence_html}
+<hr style="margin: 5px 0;">
+<small>
+<span style="color:{SNAP_LINE_STYLE['color']}">- - -</span> = Network snap connection<br>
+<span style="color:{TRANSFER_WALK_STYLE['color']}">⋯⋯</span> = Transfer walk<br>
+<span style="color:#898a8d">▬ ▬</span> = Access/Egress walk
+</small>
+</div>
+"""
+m.get_root().html.add_child(folium.Element(trip_summary))
+
+m
 ```
