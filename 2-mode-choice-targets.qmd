@@ -398,7 +398,7 @@ flowchart LR
       TM --> CB["Core bus"]
       TM --> EB["Express bus"]
       TM --> LRT["LRT<br/><i>light rail</i>"]
-      TM --> CRT["CRT<br/><i>commuter rail</i>"]
+      TM --> CRT["CRT 00-08<br/><i>commuter rail</i>"]
       TM --> BRT["BRT<br/><i>bus rapid</i>"]
     end
 
@@ -412,7 +412,7 @@ flowchart LR
       WTT --> WCB["Walk → Core bus"]
       WTT --> WEB["Walk → Express bus"]
       WTT --> WLRT["Walk → LRT"]
-      WTT --> WCRT["Walk → CRT"]
+      WTT --> WCRT["Walk → CRT 00-08"]
       WTT --> WBRT["Walk → BRT"]
 
       %% Drive-to-transit
@@ -421,7 +421,7 @@ flowchart LR
       DTT --> DCB["Drive → Core bus"]
       DTT --> DEB["Drive → Express bus"]
       DTT --> DLRT["Drive → LRT"]
-      DTT --> DCRT["Drive → CRT"]
+      DTT --> DCRT["Drive → CRT 00-08"]
       DTT --> DBRT["Drive → BRT"]
     end
   end
@@ -1102,6 +1102,16 @@ def create_tree_dataframe(
     wcrt_share = get_value(df_walk_to_transit, 'wcrt', purpose, veh_cat, period)
     wbrt_share = get_value(df_walk_to_transit, 'wbrt', purpose, veh_cat, period)
 
+    wcrt00_share = get_value(df_walk_to_transit, 'wcrt00', purpose, veh_cat, period)
+    wcrt01_share = get_value(df_walk_to_transit, 'wcrt01', purpose, veh_cat, period)
+    wcrt02_share = get_value(df_walk_to_transit, 'wcrt02', purpose, veh_cat, period)
+    wcrt03_share = get_value(df_walk_to_transit, 'wcrt03', purpose, veh_cat, period)
+    wcrt04_share = get_value(df_walk_to_transit, 'wcrt04', purpose, veh_cat, period)
+    wcrt05_share = get_value(df_walk_to_transit, 'wcrt05', purpose, veh_cat, period)
+    wcrt06_share = get_value(df_walk_to_transit, 'wcrt06', purpose, veh_cat, period)
+    wcrt07_share = get_value(df_walk_to_transit, 'wcrt07', purpose, veh_cat, period)
+    wcrt08_share = get_value(df_walk_to_transit, 'wcrt08', purpose, veh_cat, period)
+
     # Get drive-to-transit service type shares
     dlocal_share = get_value(df_drive_to_transit, 'dlocal', purpose, veh_cat, period)
     dcore_share = get_value(df_drive_to_transit, 'dcore', purpose, veh_cat, period)
@@ -1109,6 +1119,16 @@ def create_tree_dataframe(
     dlrt_share = get_value(df_drive_to_transit, 'dlrt', purpose, veh_cat, period)
     dcrt_share = get_value(df_drive_to_transit, 'dcrt', purpose, veh_cat, period)
     dbrt_share = get_value(df_drive_to_transit, 'dbrt', purpose, veh_cat, period)
+
+    dcrt00_share = get_value(df_drive_to_transit, 'dcrt00', purpose, veh_cat, period)
+    dcrt01_share = get_value(df_drive_to_transit, 'dcrt01', purpose, veh_cat, period)
+    dcrt02_share = get_value(df_drive_to_transit, 'dcrt02', purpose, veh_cat, period)
+    dcrt03_share = get_value(df_drive_to_transit, 'dcrt03', purpose, veh_cat, period)
+    dcrt04_share = get_value(df_drive_to_transit, 'dcrt04', purpose, veh_cat, period)
+    dcrt05_share = get_value(df_drive_to_transit, 'dcrt05', purpose, veh_cat, period)
+    dcrt06_share = get_value(df_drive_to_transit, 'dcrt06', purpose, veh_cat, period)
+    dcrt07_share = get_value(df_drive_to_transit, 'dcrt07', purpose, veh_cat, period)
+    dcrt08_share = get_value(df_drive_to_transit, 'dcrt08', purpose, veh_cat, period)
 
     # Base value
     total_value = 1.0
@@ -1247,6 +1267,105 @@ def create_tree_dataframe(
         'value': walk_transit_base * wbrt_share
     })
 
+    rows.append({
+        'purpose': purpose,
+        'period': display_period,
+        'veh_cat': veh_cat,
+        'level1': 'Motorized',
+        'level2': 'Transit',
+        'level3': 'Walk-to-Transit',
+        'level4': 'CRT_00',
+        'value': walk_transit_base * wcrt00_share
+    })
+
+    rows.append({
+        'purpose': purpose,
+        'period': display_period,
+        'veh_cat': veh_cat,
+        'level1': 'Motorized',
+        'level2': 'Transit',
+        'level3': 'Walk-to-Transit',
+        'level4': 'CRT_01',
+        'value': walk_transit_base * wcrt01_share
+    })
+
+    rows.append({
+        'purpose': purpose,
+        'period': display_period,
+        'veh_cat': veh_cat,
+        'level1': 'Motorized',
+        'level2': 'Transit',
+        'level3': 'Walk-to-Transit',
+        'level4': 'CRT_02',
+        'value': walk_transit_base * wcrt02_share
+    })
+
+    rows.append({
+        'purpose': purpose,
+        'period': display_period,
+        'veh_cat': veh_cat,
+        'level1': 'Motorized',
+        'level2': 'Transit',
+        'level3': 'Walk-to-Transit',
+        'level4': 'CRT_03',
+        'value': walk_transit_base * wcrt03_share
+    })
+
+    rows.append({
+        'purpose': purpose,
+        'period': display_period,
+        'veh_cat': veh_cat,
+        'level1': 'Motorized',
+        'level2': 'Transit',
+        'level3': 'Walk-to-Transit',
+        'level4': 'CRT_04',
+        'value': walk_transit_base * wcrt04_share
+    })
+
+    rows.append({
+        'purpose': purpose,
+        'period': display_period,
+        'veh_cat': veh_cat,
+        'level1': 'Motorized',
+        'level2': 'Transit',
+        'level3': 'Walk-to-Transit',
+        'level4': 'CRT_05',
+        'value': walk_transit_base * wcrt05_share
+    })
+
+    rows.append({
+        'purpose': purpose,
+        'period': display_period,
+        'veh_cat': veh_cat,
+        'level1': 'Motorized',
+        'level2': 'Transit',
+        'level3': 'Walk-to-Transit',
+        'level4': 'CRT_06',
+        'value': walk_transit_base * wcrt06_share
+    })
+
+    rows.append({
+        'purpose': purpose,
+        'period': display_period,
+        'veh_cat': veh_cat,
+        'level1': 'Motorized',
+        'level2': 'Transit',
+        'level3': 'Walk-to-Transit',
+        'level4': 'CRT_07',
+        'value': walk_transit_base * wcrt07_share
+    })
+
+    rows.append({
+        'purpose': purpose,
+        'period': display_period,
+        'veh_cat': veh_cat,
+        'level1': 'Motorized',
+        'level2': 'Transit',
+        'level3': 'Walk-to-Transit',
+        'level4': 'CRT_08',
+        'value': walk_transit_base * wcrt08_share
+    })
+
     # Motorized > Transit > Drive-to-Transit > Service Types
     drive_transit_base = total_value * motor_share * transit_share * driveacc_share * 100
 
@@ -1314,6 +1433,105 @@ def create_tree_dataframe(
         'level3': 'Drive-to-Transit',
         'level4': 'BRT',
         'value': drive_transit_base * dbrt_share
+    })
+
+    rows.append({
+        'purpose': purpose,
+        'period': display_period,
+        'veh_cat': veh_cat,
+        'level1': 'Motorized',
+        'level2': 'Transit',
+        'level3': 'Drive-to-Transit',
+        'level4': 'CRT_00',
+        'value': drive_transit_base * dcrt00_share
+    })
+
+    rows.append({
+        'purpose': purpose,
+        'period': display_period,
+        'veh_cat': veh_cat,
+        'level1': 'Motorized',
+        'level2': 'Transit',
+        'level3': 'Drive-to-Transit',
+        'level4': 'CRT_01',
+        'value': drive_transit_base * dcrt01_share
+    })
+
+    rows.append({
+        'purpose': purpose,
+        'period': display_period,
+        'veh_cat': veh_cat,
+        'level1': 'Motorized',
+        'level2': 'Transit',
+        'level3': 'Drive-to-Transit',
+        'level4': 'CRT_02',
+        'value': drive_transit_base * dcrt02_share
+    })
+
+    rows.append({
+        'purpose': purpose,
+        'period': display_period,
+        'veh_cat': veh_cat,
+        'level1': 'Motorized',
+        'level2': 'Transit',
+        'level3': 'Drive-to-Transit',
+        'level4': 'CRT_03',
+        'value': drive_transit_base * dcrt03_share
+    })
+
+    rows.append({
+        'purpose': purpose,
+        'period': display_period,
+        'veh_cat': veh_cat,
+        'level1': 'Motorized',
+        'level2': 'Transit',
+        'level3': 'Drive-to-Transit',
+        'level4': 'CRT_04',
+        'value': drive_transit_base * dcrt04_share
+    })
+
+    rows.append({
+        'purpose': purpose,
+        'period': display_period,
+        'veh_cat': veh_cat,
+        'level1': 'Motorized',
+        'level2': 'Transit',
+        'level3': 'Drive-to-Transit',
+        'level4': 'CRT_05',
+        'value': drive_transit_base * dcrt05_share
+    })
+
+    rows.append({
+        'purpose': purpose,
+        'period': display_period,
+        'veh_cat': veh_cat,
+        'level1': 'Motorized',
+        'level2': 'Transit',
+        'level3': 'Drive-to-Transit',
+        'level4': 'CRT_06',
+        'value': drive_transit_base * dcrt06_share
+    })
+
+    rows.append({
+        'purpose': purpose,
+        'period': display_period,
+        'veh_cat': veh_cat,
+        'level1': 'Motorized',
+        'level2': 'Transit',
+        'level3': 'Drive-to-Transit',
+        'level4': 'CRT_07',
+        'value': drive_transit_base * dcrt07_share
+    })
+
+    rows.append({
+        'purpose': purpose,
+        'period': display_period,
+        'veh_cat': veh_cat,
+        'level1': 'Motorized',
+        'level2': 'Transit',
+        'level3': 'Drive-to-Transit',
+        'level4': 'CRT_08',
+        'value': drive_transit_base * dcrt08_share
     })
 
     df_tree = pd.DataFrame(rows)
@@ -1780,7 +1998,7 @@ def export_calib_file(purpose, period, include_veh_categories=True):
         f.write(";relative within transit\t\t\n")
 
         # Get all transit service types
-        service_types = ['local', 'core', 'brt', 'lrt', 'express', 'crt']
+        service_types = service_mapping.values()
         transit_services = {}
         for service in service_types:
             vals = extract_values(df_transit_by_service, purpose, period, f'{service}_', include_veh_categories)
@@ -1823,7 +2041,7 @@ def export_calib_file(purpose, period, include_veh_categories=True):
 
         # Get all walk-to-transit service types
         walk_services = {}
-        for service in ['wlocal', 'wcore', 'wbrt', 'wlrt', 'wexpress', 'wcrt']:
+        for service in walk_service_mapping.values():
             vals = extract_values(df_walk_to_transit, purpose, period, f'{service}_', include_veh_categories)
             walk_services.update(vals)
 
@@ -1841,7 +2059,7 @@ def export_calib_file(purpose, period, include_veh_categories=True):
 
         # Get all drive-to-transit service types
         drive_services = {}
-        for service in ['dlocal', 'dcore', 'dbrt', 'dlrt', 'dexpress', 'dcrt']:
+        for service in drive_service_mapping.values():
             vals = extract_values(df_drive_to_transit, purpose, period, f'{service}_', include_veh_categories)
             drive_services.update(vals)
 
