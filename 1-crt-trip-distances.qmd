@@ -405,11 +405,6 @@ df_obs_linked.filter(regex='(_LAT|_LONG)$').columns
 ```
 
 ```{python}
-# What columns have non-null values for this trip?
-df_plot[df_plot.filter(regex='(PREV|NEXT|STOP).*(_LAT|_ON_BUS|_OFF_BUS)').columns].notna()
-```
-
-```{python}
 #| eval: false
 
 import folium
@@ -444,7 +439,7 @@ SURVEYED_TRIP_WEIGHT_MULTIPLIER = 1.5
 # ============================================================================
 # SETUP
 # ============================================================================
-RESPONSE_ID = 30311
+RESPONSE_ID = 6688
 
 df_plot = df_obs_linked[df_obs_linked["ID"] == RESPONSE_ID].iloc[0]
 
