@@ -346,6 +346,9 @@ response = fetch_github(
 )
 
 df_obs_linked = pd.read_csv(io.StringIO(response.text))
+
+# Filter only the Weekday trips
+df_obs_linked = df_obs_linked[df_obs_linked["DATE_TYPE"] == "Weekday"]
 df_obs_linked
 ```
 

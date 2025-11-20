@@ -123,6 +123,9 @@ response = fetch_github(
 )
 
 df_obs_linked = pd.read_csv(io.StringIO(response.text))
+
+# Filter only the Weekday trips
+df_obs_linked = df_obs_linked[df_obs_linked["DATE_TYPE"] == "Weekday"]
 df_obs_linked
 ```
 
@@ -242,69 +245,125 @@ omx_d8_ok = pd.DataFrame(omx.open_file(r"_data\Skims\omx\skm_d8_Ok.omx")['D8'])
 ## Assign which matrix to process for each row
 
 ```{python}
-# Create a new column called "skim_crt" - only assign when CRT is used
-df_obs_linked['skim_crt'] = np.select(
+# Create uses_crt column once
+df_obs_linked['uses_crt'] = df_obs_linked[['FirstMode', 'SecndMode', 'ThirdMode', 'FourthMode', 'FifthMode', 'LastMode']].eq('CRT').any(axis=1)
+```
+
+```{python}
+# Create ac_skim_crt column
+df_obs_linked['ac_skim_crt'] = np.select(
     [
-        (df_obs_linked[['FirstMode', 'SecndMode', 'ThirdMode', 'FourthMode', 'FifthMode', 'LastMode']].eq('CRT').any(axis=1)) &
-        (df_obs_linked['Ac_Mode2_Model'] == 'Walk') & (df_obs_linked['Period'].isin(['AM', 'PM'])),
-
-        (df_obs_linked[['FirstMode', 'SecndMode', 'ThirdMode', 'FourthMode', 'FifthMode', 'LastMode']].eq('CRT').any(axis=1)) &
-        (df_obs_linked['Ac_Mode2_Model'] == 'Walk') & (df_obs_linked['Period'].isin(['MD', 'EV'])),
-
-        (df_obs_linked[['FirstMode', 'SecndMode', 'ThirdMode', 'FourthMode', 'FifthMode', 'LastMode']].eq('CRT').any(axis=1)) &
-        (df_obs_linked['Ac_Mode2_Model'] == 'Drive') & (df_obs_linked['Period'].isin(['AM', 'PM'])),
-
-        (df_obs_linked[['FirstMode', 'SecndMode', 'ThirdMode', 'FourthMode', 'FifthMode', 'LastMode']].eq('CRT').any(axis=1)) &
-        (df_obs_linked['Ac_Mode2_Model'] == 'Drive') & (df_obs_linked['Period'].isin(['MD', 'EV']))
+        df_obs_linked['uses_crt'] & (df_obs_linked['Ac_Mode2_Model'] == 'Walk') & (df_obs_linked['Period'].isin(['AM', 'PM'])),
+        df_obs_linked['uses_crt'] & (df_obs_linked['Ac_Mode2_Model'] == 'Walk') & (df_obs_linked['Period'].isin(['MD', 'EV'])),
+        df_obs_linked['uses_crt'] & (df_obs_linked['Ac_Mode2_Model'] == 'Drive') & (df_obs_linked['Period'].isin(['AM', 'PM'])),
+        df_obs_linked['uses_crt'] & (df_obs_linked['Ac_Mode2_Model'] == 'Drive') & (df_obs_linked['Period'].isin(['MD', 'EV']))
     ],
-    [
-        'omx_w8_pk',
-        'omx_w8_ok',
-        'omx_d8_pk',
-        'omx_d8_ok'
-    ],
+    ['omx_w8_pk', 'omx_w8_ok', 'omx_d8_pk', 'omx_d8_ok'],
     default=None
 )
 
-df_obs_linked['skim_crt'].value_counts().reset_index()
+print("Access skim distribution:")
+print(df_obs_linked['ac_skim_crt'].value_counts().reset_index())
+```
+
+```{python}
+# Create eg_skim_crt column
+df_obs_linked['eg_skim_crt'] = np.select(
+    [
+        df_obs_linked['uses_crt'] & (df_obs_linked['Eg_Mode2_Model'] == 'Walk') & (df_obs_linked['Period'].isin(['AM', 'PM'])),
+        df_obs_linked['uses_crt'] & (df_obs_linked['Eg_Mode2_Model'] == 'Walk') & (df_obs_linked['Period'].isin(['MD', 'EV'])),
+        df_obs_linked['uses_crt'] & (df_obs_linked['Eg_Mode2_Model'] == 'Drive') & (df_obs_linked['Period'].isin(['AM', 'PM'])),
+        df_obs_linked['uses_crt'] & (df_obs_linked['Eg_Mode2_Model'] == 'Drive') & (df_obs_linked['Period'].isin(['MD', 'EV']))
+    ],
+    ['omx_w8_pk', 'omx_w8_ok', 'omx_d8_pk', 'omx_d8_ok'],
+    default=None
+)
+
+print("\nEgress skim distribution:")
+print(df_obs_linked['eg_skim_crt'].value_counts().reset_index())
 ```
 
 ## Calculate CRT Distances
 
 ```{python}
+#| eval: false
+
+# # Calculate CRT Distances - vectorized approach
+# # Filter to only CRT rows with valid TAZIDs
+# mask = (
+#     df_obs_linked['ac_skim_crt'].notna() &
+#     df_obs_linked['p_TAZID'].notna() &
+#     df_obs_linked['a_TAZID'].notna()
+# )
+
+# # Initialize column
+# df_obs_linked['dist_CRT'] = np.nan
+
+# # Process each matrix type separately (more efficient than row-by-row)
+# for matrix_name in ['omx_w8_pk', 'omx_w8_ok', 'omx_d8_pk', 'omx_d8_ok']:
+#     # Get rows that need this specific matrix
+#     matrix_mask = mask & (df_obs_linked['ac_skim_crt'] == matrix_name)
+
+#     if matrix_mask.any():
+#         # Get the actual matrix dataframe
+#         matrix_df = globals()[matrix_name]
+
+#         # Extract distances for all rows at once
+#         row_indices = (df_obs_linked.loc[matrix_mask, 'p_TAZID'] - 1).astype(int)
+#         col_indices = (df_obs_linked.loc[matrix_mask, 'a_TAZID'] - 1).astype(int)
+
+#         # Use numpy's advanced indexing
+#         df_obs_linked.loc[matrix_mask, 'dist_CRT'] = matrix_df.values[row_indices, col_indices]
+
+# df_obs_linked[['dist_CRT']]
+```
+
+```{python}
 # Calculate CRT Distances - vectorized approach
-# Filter to only CRT rows with valid TAZIDs
-mask = (
-    df_obs_linked['skim_crt'].notna() &
+# Create mask column for valid CRT rows
+df_obs_linked['valid_crt_mask'] = (
+    (df_obs_linked['ac_skim_crt'].notna() | df_obs_linked['eg_skim_crt'].notna()) &
     df_obs_linked['p_TAZID'].notna() &
     df_obs_linked['a_TAZID'].notna()
 )
 
-# Initialize column
+# Initialize columns
 df_obs_linked['dist_CRT'] = np.nan
+df_obs_linked['use_egress'] = False  # Track which direction we used
 
-# Process each matrix type separately (more efficient than row-by-row)
+# Process each matrix type separately
 for matrix_name in ['omx_w8_pk', 'omx_w8_ok', 'omx_d8_pk', 'omx_d8_ok']:
-    # Get rows that need this specific matrix
-    matrix_mask = mask & (df_obs_linked['skim_crt'] == matrix_name)
+    matrix_df = globals()[matrix_name]
 
-    if matrix_mask.any():
-        # Get the actual matrix dataframe
-        matrix_df = globals()[matrix_name]
+    # Access skim: normal direction (p_TAZID = row, a_TAZID = col)
+    ac_mask = df_obs_linked['valid_crt_mask'] & (df_obs_linked['ac_skim_crt'] == matrix_name)
 
-        # Extract distances for all rows at once
-        row_indices = (df_obs_linked.loc[matrix_mask, 'p_TAZID'] - 1).astype(int)
-        col_indices = (df_obs_linked.loc[matrix_mask, 'a_TAZID'] - 1).astype(int)
+    if ac_mask.any():
+        row_indices = (df_obs_linked.loc[ac_mask, 'p_TAZID'] - 1).astype(int)
+        col_indices = (df_obs_linked.loc[ac_mask, 'a_TAZID'] - 1).astype(int)
+        df_obs_linked.loc[ac_mask, 'dist_CRT'] = matrix_df.values[row_indices, col_indices]
 
-        # Use numpy's advanced indexing
-        df_obs_linked.loc[matrix_mask, 'dist_CRT'] = matrix_df.values[row_indices, col_indices]
+    # Egress fallback: reversed direction (a_TAZID = row, p_TAZID = col) when access = 0
+    # Comment out the block below to disable egress fallback (original behavior)
+    eg_mask = (
+        df_obs_linked['valid_crt_mask'] &
+        (df_obs_linked['eg_skim_crt'] == matrix_name) &
+        # ((df_obs_linked['dist_CRT'] == 0) | df_obs_linked['dist_CRT'].isna())
+        (df_obs_linked['dist_CRT'] == 0)
+    )
 
-df_obs_linked[['dist_CRT']]
+    if eg_mask.any():
+        row_indices = (df_obs_linked.loc[eg_mask, 'a_TAZID'] - 1).astype(int)
+        col_indices = (df_obs_linked.loc[eg_mask, 'p_TAZID'] - 1).astype(int)
+        df_obs_linked.loc[eg_mask, 'dist_CRT'] = matrix_df.values[row_indices, col_indices]
+        df_obs_linked.loc[eg_mask, 'use_egress'] = True
+
+df_obs_linked[['dist_CRT', 'use_egress']]
 ```
 
 ```{python}
 crt_dist_count = (
-    df_obs_linked[['ID', 'Ac_Mode2_Model', 'PK_OK', 'p_TAZID', 'a_TAZID', 'dist_CRT']]
+    df_obs_linked[['ID', 'PK_OK', 'Ac_Mode2_Model', 'ac_skim_crt', 'Eg_Mode2_Model', 'eg_skim_crt', 'p_TAZID', 'a_TAZID', 'dist_CRT']]
     # .replace(0, np.nan)
     .dropna()
     .sort_values('dist_CRT')
@@ -439,7 +498,7 @@ SURVEYED_TRIP_WEIGHT_MULTIPLIER = 1.5
 # ============================================================================
 # SETUP
 # ============================================================================
-RESPONSE_ID = 6688
+RESPONSE_ID = 15514
 
 df_plot = df_obs_linked[df_obs_linked["ID"] == RESPONSE_ID].iloc[0]
 
