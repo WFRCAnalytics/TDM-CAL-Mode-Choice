@@ -339,16 +339,10 @@ client = BigQuery.getBigQueryClient_Confidential2023UtahHTS()
 ## UTA On-Board Survey
 
 ```{python}
-# Read Linked UTA On-Board Survey Data directly from GitHub repo
-response = fetch_github(
-    "https://raw.githubusercontent.com/WFRCAnalytics/DATA-OBS-Prep-For-TDM/refs/heads/main/_output/UTA_OBS_2024_Linked_FactorAdjusted.csv",
-    mode = "private"
+df_obs_linked = pd.read_csv(
+    r"_output/UTA_OBS_2024_Linked_FactorAdjusted_CRT.csv"
 )
 
-df_obs_linked = pd.read_csv(io.StringIO(response.text))
-
-# Filter only the Weekday trips
-df_obs_linked = df_obs_linked[df_obs_linked["DATE_TYPE"] == "Weekday"]
 df_obs_linked
 ```
 
@@ -460,6 +454,19 @@ flowchart LR
   class LB,CB,EB,LRT,CRT,BRT,WALK,BIKE leafNode
 ```
 
+# Process OBS to classify CRT by distances
+
+```{python}
+# Create Linked_Mode_txt_crt column
+df_obs_linked['Linked_Mode_txt_crt'] = np.where(
+    df_obs_linked['Linked_Mode_txt'] == 'CRT',
+    df_obs_linked['class_CRT'],
+    df_obs_linked['Linked_Mode_txt']
+)
+
+df_obs_linked[['Linked_Mode_txt', 'class_CRT', 'Linked_Mode_txt_crt']]
+```
+
 # Process HTS to get needed vars
 
 OBS has already been processed in OBS Prep repo. So, this section will only Process HTS data to get needed columns.
@@ -543,7 +550,7 @@ hts_transit = df_hts_linked[
 ].copy()
 
 # Filter out microtransit
-obs_transit = df_obs_linked[df_obs_linked['Linked_Mode_txt'] != 'MT'].copy()
+obs_transit = df_obs_linked[df_obs_linked['Linked_Mode_txt_crt'] != 'MT'].copy()
 ```
 
 ### By access mode
@@ -678,7 +685,7 @@ df_hts_auto
 ```{python}
 # Transit trips from OBS
 df_obs_transit = (
-    df_obs_linked[df_obs_linked['Linked_Mode_txt'] != 'MT']
+    df_obs_linked[df_obs_linked['Linked_Mode_txt_crt'] != 'MT']
     [['Veh_Cat3p', 'Purp5_text', 'PK_OK', 'Ac_Mode2_Model', 'trip_weight']]
     .assign(mode=lambda x: x['Ac_Mode2_Model'].map({'Walk': 'walk-to-transit', 'Drive': 'drive-to-transit'}))
     .rename(columns={'trip_weight': 'weight'})
@@ -855,16 +862,25 @@ service_mapping = {
     'COR': 'core',
     'EXP': 'express',
     'LRT': 'lrt',
+    'BRT': 'brt',
     'CRT': 'crt',
-    'BRT': 'brt'
+    'CRT_00': 'crt00',
+    'CRT_01': 'crt01',
+    'CRT_02': 'crt02',
+    'CRT_03': 'crt03',
+    'CRT_04': 'crt04',
+    'CRT_05': 'crt05',
+    'CRT_06': 'crt06',
+    'CRT_07': 'crt07',
+    'CRT_08': 'crt08'
 }
 
 df_transit_by_service = calculate_categorical_shares(
     df_obs_linked,
-    category_col='Linked_Mode_txt',
+    category_col='Linked_Mode_txt_crt',
     weight_col='trip_weight',
     group_cols=['Veh_Cat3p', 'Purp5_text', 'PK_OK'],
-    filter_condition='Linked_Mode_txt != "MT"',
+    filter_condition='Linked_Mode_txt_crt != "MT"',
     category_mapping=service_mapping,
     prefix='calib_share'
 )
@@ -894,7 +910,7 @@ df_transit_by_access = calculate_categorical_shares(
     category_col='Ac_Mode2_Model',
     weight_col='trip_weight',
     group_cols=['Veh_Cat3p', 'Purp5_text', 'PK_OK'],
-    filter_condition='Linked_Mode_txt != "MT"',
+    filter_condition='Linked_Mode_txt_crt != "MT"',
     category_mapping=access_mapping,
     prefix='calib_share'
 )
@@ -918,16 +934,25 @@ walk_service_mapping = {
     'LCL': 'wlocal',
     'EXP': 'wexpress',
     'LRT': 'wlrt',
+    'BRT': 'wbrt',
     'CRT': 'wcrt',
-    'BRT': 'wbrt'
+    'CRT_00': 'wcrt00',
+    'CRT_01': 'wcrt01',
+    'CRT_02': 'wcrt02',
+    'CRT_03': 'wcrt03',
+    'CRT_04': 'wcrt04',
+    'CRT_05': 'wcrt05',
+    'CRT_06': 'wcrt06',
+    'CRT_07': 'wcrt07',
+    'CRT_08': 'wcrt08'
 }
 
 df_walk_to_transit = calculate_categorical_shares(
     df_obs_linked,
-    category_col='Linked_Mode_txt',
+    category_col='Linked_Mode_txt_crt',
     weight_col='trip_weight',
     group_cols=['Veh_Cat3p', 'Purp5_text', 'PK_OK'],
-    filter_condition='Ac_Mode2_Model == "Walk" & Linked_Mode_txt != "MT"',
+    filter_condition='Ac_Mode2_Model == "Walk" & Linked_Mode_txt_crt != "MT"',
     category_mapping=walk_service_mapping,
     prefix='calib_share'
 )
@@ -952,16 +977,25 @@ drive_service_mapping = {
     'LCL': 'dlocal',
     'EXP': 'dexpress',
     'LRT': 'dlrt',
+    'BRT': 'dbrt',
     'CRT': 'dcrt',
-    'BRT': 'dbrt'
+    'CRT_00': 'dcrt00',
+    'CRT_01': 'dcrt01',
+    'CRT_02': 'dcrt02',
+    'CRT_03': 'dcrt03',
+    'CRT_04': 'dcrt04',
+    'CRT_05': 'dcrt05',
+    'CRT_06': 'dcrt06',
+    'CRT_07': 'dcrt07',
+    'CRT_08': 'dcrt08'
 }
 
 df_drive_to_transit = calculate_categorical_shares(
     df_obs_linked,
-    category_col='Linked_Mode_txt',
+    category_col='Linked_Mode_txt_crt',
     weight_col='trip_weight',
     group_cols=['Veh_Cat3p', 'Purp5_text', 'PK_OK'],
-    filter_condition='Ac_Mode2_Model == "Drive" & Linked_Mode_txt != "MT"',
+    filter_condition='Ac_Mode2_Model == "Drive" & Linked_Mode_txt_crt != "MT"',
     category_mapping=drive_service_mapping,
     prefix='calib_share'
 )

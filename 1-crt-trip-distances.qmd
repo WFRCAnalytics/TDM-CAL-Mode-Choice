@@ -426,33 +426,13 @@ plt.show()
 ## Assign CRT Class for each bins
 
 ```{python}
-# Create CRT distance classes
-df_obs_linked['class_CRT'] = np.select(
-    [
-        (df_obs_linked['dist_CRT'].isna()) | (df_obs_linked['dist_CRT'] == 0),
-        (df_obs_linked['dist_CRT'] > 0) & (df_obs_linked['dist_CRT'] <= 10),
-        (df_obs_linked['dist_CRT'] > 10) & (df_obs_linked['dist_CRT'] <= 20),
-        (df_obs_linked['dist_CRT'] > 20) & (df_obs_linked['dist_CRT'] <= 30),
-        (df_obs_linked['dist_CRT'] > 30) & (df_obs_linked['dist_CRT'] <= 40),
-        (df_obs_linked['dist_CRT'] > 40) & (df_obs_linked['dist_CRT'] <= 50),
-        (df_obs_linked['dist_CRT'] > 50) & (df_obs_linked['dist_CRT'] <= 60),
-        (df_obs_linked['dist_CRT'] > 60) & (df_obs_linked['dist_CRT'] <= 70),
-        (df_obs_linked['dist_CRT'] > 70) & (df_obs_linked['dist_CRT'] <= 80),
-        (df_obs_linked['dist_CRT'] > 80)
-    ],
-    [
-        None,
-        'CRT_00',
-        'CRT_01',
-        'CRT_02',
-        'CRT_03',
-        'CRT_04',
-        'CRT_05',
-        'CRT_06',
-        'CRT_07',
-        'CRT_08'
-    ],
-    default=None
+# Create CRT distance classes using pd.cut
+df_obs_linked['class_CRT'] = pd.cut(
+    df_obs_linked['dist_CRT'],
+    bins=[0, 10, 20, 30, 40, 50, 60, 70, 80, np.inf],
+    labels=['CRT_00', 'CRT_01', 'CRT_02', 'CRT_03', 'CRT_04', 'CRT_05', 'CRT_06', 'CRT_07', 'CRT_08'],
+    right=True,  # intervals are (a, b] - include right edge
+    include_lowest=False  # exclude 0 from first bin
 )
 
 # Check the distribution
@@ -964,3 +944,25 @@ m.get_root().html.add_child(folium.Element(trip_summary))
 
 m
 ```
+
+# Export
+
+## Save OBS data with CRT Links
+
+```{python}
+# Create output directory if it doesn't exist
+output_dir = Path("_output")
+output_dir.mkdir(parents=True, exist_ok=True)
+
+# Export to CSV
+df_obs_linked.to_csv(
+    output_dir / "UTA_OBS_2024_Linked_FactorAdjusted_CRT.csv",
+    index=False
+)
+
+print(f"Exported {len(df_obs_linked)} records")
+```
+
+::: {.callout-tip title="Download the output file:"}
+[UTA_OBS_2024_Linked_FactorAdjusted_CRT.csv](./_output/UTA_OBS_2024_Linked_FactorAdjusted_CRT.csv)
+:::
