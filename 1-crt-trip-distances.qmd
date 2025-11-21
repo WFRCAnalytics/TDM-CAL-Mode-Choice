@@ -424,7 +424,7 @@ SURVEYED_TRIP_WEIGHT_MULTIPLIER = 1.5
 # ============================================================================
 # SETUP
 # ============================================================================
-RESPONSE_ID = 15514
+RESPONSE_ID = 21613
 
 df_plot = df_obs_linked[df_obs_linked["ID"] == RESPONSE_ID].iloc[0]
 
