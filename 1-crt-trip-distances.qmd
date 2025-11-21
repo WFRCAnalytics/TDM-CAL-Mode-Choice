@@ -308,6 +308,10 @@ df_obs_linked[['dist_CRT']]
 ```
 
 ```{python}
+(df_obs_linked[df_obs_linked['dist_CRT'] == 0]['trip_weight'].sum() / df_obs_linked['trip_weight'].sum()) * 100
+```
+
+```{python}
 crt_dist_count = (
     df_obs_linked[['ID', 'PK_OK', 'Ac_Mode2_Model', 'Eg_Mode2_Model', 'p_TAZID', 'a_TAZID', 'dist_CRT']]
     # .replace(0, np.nan)
@@ -316,77 +320,6 @@ crt_dist_count = (
 )
 
 crt_dist_count
-```
-
-```{python}
-(df_obs_linked[df_obs_linked['dist_CRT'] == 0]['trip_weight'].sum() / df_obs_linked['trip_weight'].sum()) * 100
-```
-
-```{python}
-# Set seaborn style
-sns.set_style("whitegrid")
-sns.set_context("notebook", font_scale=1.1)
-
-plt.figure(figsize=(10, 6))
-
-# Filter relevant data
-df_valid = df_obs_linked[
-    (df_obs_linked['dist_CRT'].notna()) #& # filter out NaNs and
-    # (df_obs_linked['dist_CRT'] > 0) # only non-zero distances
-]
-
-# Create histogram with KDE
-ax = sns.histplot(
-    data=df_valid,
-    x='dist_CRT',
-    weights="trip_weight",
-    bins=(lambda x: range(0, int(df_valid['dist_CRT'].max()) + x, x))(5),
-    kde=True,
-    color='steelblue',
-    edgecolor='white',
-    linewidth=0.5,
-    alpha=0.7
-)
-
-# Add 95th percentile line using sorted cumulative weights
-df_sorted = df_valid.sort_values('dist_CRT')
-cumsum = df_sorted['trip_weight'].cumsum()
-pct95 = df_sorted.loc[cumsum >= cumsum.iloc[-1] * 0.95, 'dist_CRT'].iloc[0]
-
-plt.axvline(pct95, color='red', linestyle='--', linewidth=2, label=f'95th percentile: {pct95:.1f} mi')
-plt.legend()
-
-# Add grid for better readability
-plt.grid(axis='y', alpha=0.3, linestyle='--')
-
-# Customize
-plt.title('Distribution of CRT Travel Distances', fontsize=16, fontweight='bold', pad=20)
-plt.xlabel('Distance (miles)', fontsize=12)
-plt.ylabel('Frequency', fontsize=12)
-
-sns.despine()
-plt.tight_layout()
-plt.show()
-```
-
-## Assign CRT Class for each bins
-
-```{python}
-# Create CRT distance classes using pd.cut
-df_obs_linked['class_CRT'] = pd.cut(
-    df_obs_linked['dist_CRT'],
-    bins=[0, 10, 20, 30, 40, 50, 60, 70, 80, np.inf],
-    labels=['CRT_00', 'CRT_01', 'CRT_02', 'CRT_03', 'CRT_04', 'CRT_05', 'CRT_06', 'CRT_07', 'CRT_08'],
-    right=True,  # intervals are (a, b] - include right edge
-    include_lowest=False  # exclude 0 from first bin
-)
-
-# Check the distribution
-df_obs_linked['class_CRT'].value_counts().sort_index()
-```
-
-```{python}
-df_obs_linked.filter(regex='(_LAT|_LONG)$').columns
 ```
 
 ```{python}
@@ -889,6 +822,352 @@ Egress: {df_plot['Eg_Mode3_Model']} ({df_plot.get('egress_dist', 'N/A'):.2f} mi)
 m.get_root().html.add_child(folium.Element(trip_summary))
 
 m
+```
+
+## Assign CRT Class for each bins
+
+```{python}
+# Create CRT distance classes using pd.cut
+df_obs_linked['class_CRT'] = pd.cut(
+    df_obs_linked['dist_CRT'],
+    bins=[0, 10, 20, 30, 40, 50, 60, 70, 80, np.inf],
+    labels=['CRT_00', 'CRT_01', 'CRT_02', 'CRT_03', 'CRT_04', 'CRT_05', 'CRT_06', 'CRT_07', 'CRT_08'],
+    right=True,  # intervals are (a, b] - include right edge
+    include_lowest=False  # exclude 0 from first bin
+)
+
+# Check the distribution
+df_obs_linked['class_CRT'].value_counts().sort_index()
+```
+
+# Visualization
+
+## Static
+
+```{python}
+# ============================================================================
+# Trip Length Frequency
+# ============================================================================
+
+# Set seaborn style
+sns.set_style("whitegrid")
+sns.set_context("notebook", font_scale=1.1)
+
+plt.figure(figsize=(10, 6))
+
+# Filter relevant data
+df_valid = df_obs_linked[
+    (df_obs_linked['dist_CRT'].notna()) #& # filter out NaNs and
+    # (df_obs_linked['dist_CRT'] > 0) # only non-zero distances
+]
+
+# Create histogram with KDE
+ax = sns.histplot(
+    data=df_valid,
+    x='dist_CRT',
+    weights="trip_weight",
+    bins=(lambda x: range(0, int(df_valid['dist_CRT'].max()) + x, x))(5),
+    kde=True,
+    color='steelblue',
+    edgecolor='white',
+    linewidth=0.5,
+    alpha=0.7
+)
+
+# Add 95th percentile line using sorted cumulative weights
+df_sorted = df_valid.sort_values('dist_CRT')
+cumsum = df_sorted['trip_weight'].cumsum()
+pct95 = df_sorted.loc[cumsum >= cumsum.iloc[-1] * 0.95, 'dist_CRT'].iloc[0]
+
+plt.axvline(pct95, color='red', linestyle='--', linewidth=2, label=f'95th percentile: {pct95:.1f} mi')
+plt.legend()
+
+# Add grid for better readability
+plt.grid(axis='y', alpha=0.3, linestyle='--')
+
+# Customize
+plt.title('Distribution of CRT Travel Distances', fontsize=16, fontweight='bold', pad=20)
+plt.xlabel('Distance (miles)', fontsize=12)
+plt.ylabel('Frequency', fontsize=12)
+
+sns.despine()
+plt.tight_layout()
+plt.show()
+```
+
+## Interactive
+
+```{python}
+# ============================================================================
+# Data Preparation and Library Imports
+# ============================================================================
+
+import plotly.graph_objects as go
+import plotly.express as px
+import numpy as np
+import pandas as pd
+
+# Filter valid CRT data
+df_crt_valid = df_obs_linked[
+    (df_obs_linked['dist_CRT'].notna()) &
+    (df_obs_linked['trip_weight'].notna())
+].copy()
+
+# Create distance bins for clustered bar chart
+df_crt_valid['dist_bin'] = pd.cut(
+    df_crt_valid['dist_CRT'],
+    bins=[0, 10, 20, 30, 40, 50, 60, 70, 80, np.inf],
+    labels=['0-10', '10-20', '20-30', '30-40', '40-50', '50-60', '60-70', '70-80', '80+'],
+    right=True
+)
+
+# Helper function for weighted histograms
+def create_weighted_bins(distances, weights, bin_size=5, max_dist=None):
+    """Create weighted histogram bins"""
+    if max_dist is None:
+        max_dist = distances.max()
+    bins = np.arange(0, max_dist + bin_size, bin_size)
+    bin_centers = bins[:-1] + bin_size/2
+    hist_values, _ = np.histogram(distances, bins=bins, weights=weights)
+    return bin_centers, hist_values
+
+# Prepare data for all visualizations
+max_dist = df_crt_valid['dist_CRT'].max()
+bin_size = 5
+periods = sorted(df_crt_valid['PK_OK'].dropna().unique())
+purposes = sorted(df_crt_valid['Purp5_text'].dropna().unique())
+distance_bins = ['0-10', '10-20', '20-30', '30-40', '40-50', '50-60', '60-70', '70-80', '80+']
+
+# Color schemes
+colors_period = {'PK': '#E74C3C', 'OK': '#3498DB'}
+colors_purpose = px.colors.qualitative.Set2[:len(purposes)]
+```
+
+```{python}
+# ============================================================================
+# Interactive Histogram by Period
+# ============================================================================
+
+fig_period = go.Figure()
+
+for period in periods:
+    df_period = df_crt_valid[df_crt_valid['PK_OK'] == period]
+    bin_centers, hist_values = create_weighted_bins(
+        df_period['dist_CRT'].values,
+        df_period['trip_weight'].values,
+        bin_size=bin_size,
+        max_dist=max_dist
+    )
+
+    fig_period.add_trace(
+        go.Bar(
+            x=bin_centers,
+            y=hist_values,
+            name=f'{period} Period',
+            marker_color=colors_period.get(period, '#95A5A6'),
+            opacity=0.85,  # Slightly less transparent for stacked bars
+            width=bin_size * 0.9,
+            hovertemplate='<b>%{fullData.name}</b><br>' +
+                          'Distance: %{x:.1f} mi<br>' +
+                          'Weighted Trips: %{y:.0f}<br>' +
+                          '<extra></extra>'
+        )
+    )
+
+fig_period.update_layout(
+    title={
+        'text': '<b>CRT Trip Length Distribution by Period</b><br><sub>Click legend items to toggle on/off</sub>',
+        'x': 0.5,
+        'xanchor': 'center',
+        'font': {'size': 16}
+    },
+    xaxis=dict(
+        title='Distance (miles)',
+        range=[0, max_dist + 5]
+    ),
+    yaxis=dict(
+        title='Weighted Trip Frequency',
+        gridcolor='lightgray'
+    ),
+    height=675,
+    width=1200,
+    template='plotly_white',
+    hovermode='closest',
+    barmode='stack',  # Changed to stack
+    showlegend=True,
+    legend=dict(
+        orientation='v',
+        yanchor='top',
+        y=1,
+        xanchor='left',
+        x=1.02,
+        bgcolor='rgba(255, 255, 255, 0.9)',
+        bordercolor='gray',
+        borderwidth=1
+    )
+)
+
+fig_period.show()
+```
+
+```{python}
+# ============================================================================
+# Interactive Histogram by Purpose
+# ============================================================================
+
+fig_purpose = go.Figure()
+
+for i, purpose in enumerate(purposes):
+    df_purpose = df_crt_valid[df_crt_valid['Purp5_text'] == purpose]
+    bin_centers, hist_values = create_weighted_bins(
+        df_purpose['dist_CRT'].values,
+        df_purpose['trip_weight'].values,
+        bin_size=bin_size,
+        max_dist=max_dist
+    )
+
+    fig_purpose.add_trace(
+        go.Bar(
+            x=bin_centers,
+            y=hist_values,
+            name=purpose,
+            marker_color=colors_purpose[i],
+            opacity=0.85,  # Slightly less transparent for stacked bars
+            width=bin_size * 0.9,
+            hovertemplate='<b>%{fullData.name}</b><br>' +
+                          'Distance: %{x:.1f} mi<br>' +
+                          'Weighted Trips: %{y:.0f}<br>' +
+                          '<extra></extra>'
+        )
+    )
+
+fig_purpose.update_layout(
+    title={
+        'text': '<b>CRT Trip Length Distribution by Purpose</b><br><sub>Click legend items to toggle on/off</sub>',
+        'x': 0.5,
+        'xanchor': 'center',
+        'font': {'size': 16}
+    },
+    xaxis=dict(
+        title='Distance (miles)',
+        range=[0, max_dist + 5]
+    ),
+    yaxis=dict(
+        title='Weighted Trip Frequency',
+        gridcolor='lightgray'
+    ),
+    height=675,
+    width=1200,
+    template='plotly_white',
+    hovermode='closest',
+    barmode='stack',  # Changed to stack
+    showlegend=True,
+    legend=dict(
+        orientation='v',
+        yanchor='top',
+        y=1,
+        xanchor='left',
+        x=1.02,
+        bgcolor='rgba(255, 255, 255, 0.9)',
+        bordercolor='gray',
+        borderwidth=1
+    )
+)
+
+fig_purpose.show()
+```
+
+```{python}
+# ============================================================================
+# Clustered Stacked Bar Chart by Period and Purpose
+# ============================================================================
+
+# Aggregate data
+agg_data = df_crt_valid.groupby(['dist_bin', 'PK_OK', 'Purp5_text'], observed=True)['trip_weight'].sum().reset_index()
+
+# Create figure
+fig_cluster = go.Figure()
+
+# Bar width settings
+pk_width = 0.35
+ok_width = pk_width * 0.7
+gap = 0.15
+
+# Create traces
+for i, purpose in enumerate(purposes):
+    for j, period in enumerate(periods):
+        data_subset = agg_data[
+            (agg_data['Purp5_text'] == purpose) &
+            (agg_data['PK_OK'] == period)
+        ]
+        data_subset = data_subset.set_index('dist_bin').reindex(distance_bins, fill_value=0).reset_index()
+
+        base_x = np.arange(len(distance_bins))
+
+        if period == 'PK':
+            x_offset = -gap/2 - pk_width/2
+            bar_width = pk_width
+        else:
+            x_offset = gap/2 + ok_width/2
+            bar_width = ok_width
+
+        x_positions = base_x + x_offset
+
+        fig_cluster.add_trace(go.Bar(
+            name=purpose,
+            x=x_positions,
+            y=data_subset['trip_weight'],
+            marker_color=colors_purpose[i],
+            opacity=0.85,
+            width=bar_width,
+            legendgroup=purpose,
+            showlegend=(j == 0),
+            offsetgroup=period,
+            hovertemplate='<b>%{fullData.legendgroup}</b><br>' +
+                          'Period: ' + period + '<br>' +
+                          'Distance: %{text}<br>' +
+                          'Weighted Trips: %{y:.0f}<br>' +
+                          '<extra></extra>',
+            text=data_subset['dist_bin']
+        ))
+
+# Update layout
+fig_cluster.update_layout(
+    title={
+        'text': '<b>CRT Trip Length Distribution by Distance, Period, and Purpose</b><br><sub>Wider bars = Peak | Narrower bars = Off-Peak</sub>',
+        'x': 0.5,
+        'xanchor': 'center',
+        'font': {'size': 16}
+    },
+    xaxis=dict(
+        title='Distance Range (miles)',
+        tickmode='array',
+        tickvals=np.arange(len(distance_bins)),
+        ticktext=distance_bins,
+        tickangle=0
+    ),
+    yaxis=dict(
+        title='Weighted Trip Frequency',
+        gridcolor='lightgray'
+    ),
+    barmode='stack',
+    height=900,
+    width=1600,
+    template='plotly_white',
+    hovermode='closest',
+    legend=dict(
+        title=dict(text='<b>Trip Purpose</b><br><i>(Click to toggle)</i>', font=dict(size=12)),
+        orientation='v',
+        yanchor='top',
+        y=1,
+        xanchor='left',
+        x=1.02
+    ),
+    plot_bgcolor='white',
+    bargap=0.3
+)
+
+fig_cluster.show()
 ```
 
 # Export
