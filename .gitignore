@@ -9,5 +9,5 @@
 *.PRN
 
 # Files > 100 MB
-_data/Skims/*.mtx
-_data/Skims/omx/*.omx
+_data/Skims/*/*.mtx
+_data/Skims/*/*.omx
