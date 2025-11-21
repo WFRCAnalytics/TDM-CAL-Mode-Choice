@@ -42,12 +42,7 @@ load_dotenv()
 
 ## Environment Variables
 
-```{python}
-USE_CRT_CLASSES = True  # Set to False to use single CRT category
 
-# Determine which column to use for mode analysis
-MODE_COLUMN = 'Linked_Mode_txt_crt' if USE_CRT_CLASSES else 'Linked_Mode_txt'
-```
 
 ## Helper Functions
 
@@ -461,21 +456,69 @@ flowchart LR
 
 # Process OBS to classify CRT by distances
 
-```{python}
-# Create Linked_Mode_txt_crt column
-df_obs_linked['Linked_Mode_txt_crt'] = np.where(
-    df_obs_linked['Linked_Mode_txt'] == 'CRT',
-    df_obs_linked['class_CRT'],
-    df_obs_linked['Linked_Mode_txt']
-)
+## Check CRT Categories
 
-df_obs_linked[['Linked_Mode_txt', 'class_CRT', 'Linked_Mode_txt_crt']]
+```{python}
+df_obs_linked[df_obs_linked['Linked_Mode_txt'] == 'CRT']['class_CRT'].value_counts()
 ```
 
+
 ```{python}
-# Auto-generate CRT mappings based on available data
-unique_modes = df_obs_linked[MODE_COLUMN].dropna().unique()
-crt_categories = sorted([mode for mode in unique_modes if mode.startswith('CRT')])
+# Get CRT subclasses from class_CRT column
+crt_categories = sorted(
+    df_obs_linked[df_obs_linked['Linked_Mode_txt'] == 'CRT']['class_CRT']
+    .dropna()
+    .unique()
+)
+
+crt_categories
+```
+
+## Compute CRT Class Proportions by Purpose
+
+```{python}
+# Compute CRT Subclass Proportions by Purpose Only
+# This will be used to expand single CRT category into detailed CRT classes
+
+print("\n" + "=" * 80)
+print("COMPUTING CRT SUBCLASS PROPORTIONS BY PURPOSE")
+print("=" * 80)
+
+# Filter to CRT trips only
+df_crt_only = df_obs_linked[
+    (df_obs_linked['Linked_Mode_txt'] == 'CRT') &
+    (df_obs_linked['class_CRT'].notna())
+].copy()
+
+# Compute P(class_CRT_i | CRT, Purpose)
+crt_purpose_props = {}
+
+for purpose in sorted(df_crt_only['Purp5_text'].unique()):
+    purpose_subset = df_crt_only[df_crt_only['Purp5_text'] == purpose]
+
+    if len(purpose_subset) > 0:
+        # Calculate weighted shares by class_CRT
+        weighted_counts = purpose_subset.groupby('class_CRT')['trip_weight'].sum()
+        total_weight = purpose_subset['trip_weight'].sum()
+
+        purpose_props = {}
+        for crt_class, weight in weighted_counts.items():
+            purpose_props[crt_class] = weight / total_weight
+
+        crt_purpose_props[purpose] = purpose_props
+
+        # # Display results
+        # print(f"\n{purpose}:")
+        # for crt_class in sorted(purpose_props.keys()):
+        #     print(f"  P({crt_class} | CRT, {purpose}) = {purpose_props[crt_class]:.4f}")
+
+# # Verify proportions sum to 1.0 for each purpose
+# print("\n" + "-" * 60)
+# print("Verification - sums by purpose:")
+# for purpose, props in crt_purpose_props.items():
+#     total = sum(props.values())
+#     status = "✅" if abs(total - 1.0) < 0.01 else "⚠️"
+#     print(f"  {purpose}: {total:.4f} {status}")
 ```
 
 # Process HTS to get needed vars
@@ -561,7 +604,7 @@ hts_transit = df_hts_linked[
 ].copy()
 
 # Filter out microtransit
-obs_transit = df_obs_linked[df_obs_linked['Linked_Mode_txt_crt'] != 'MT'].copy()
+obs_transit = df_obs_linked[df_obs_linked['Linked_Mode_txt'] != 'MT'].copy()
 ```
 
 ### By access mode
@@ -696,7 +739,7 @@ df_hts_auto
 ```{python}
 # Transit trips from OBS
 df_obs_transit = (
-    df_obs_linked[df_obs_linked['Linked_Mode_txt_crt'] != 'MT']
+    df_obs_linked[df_obs_linked['Linked_Mode_txt'] != 'MT']
     [['Veh_Cat3p', 'Purp5_text', 'PK_OK', 'Ac_Mode2_Model', 'trip_weight']]
     .assign(mode=lambda x: x['Ac_Mode2_Model'].map({'Walk': 'walk-to-transit', 'Drive': 'drive-to-transit'}))
     .rename(columns={'trip_weight': 'weight'})
@@ -874,21 +917,17 @@ service_mapping = {
     'COR': 'core',
     'EXP': 'express',
     'LRT': 'lrt',
-    'BRT': 'brt',
+    'CRT': 'crt',
+    'BRT': 'brt'
 }
-
-# Auto-generate CRT mappings
-for crt_cat in crt_categories:
-    suffix = '' if crt_cat == 'CRT' else crt_cat.split('_')[1].lower()
-    service_mapping[crt_cat] = f'crt{suffix}'
 
 # 6. Transit by Service Type
 df_transit_by_service = calculate_categorical_shares(
     df_obs_linked,
-    category_col=MODE_COLUMN,
+    category_col='Linked_Mode_txt',
     weight_col='trip_weight',
     group_cols=['Veh_Cat3p', 'Purp5_text', 'PK_OK'],
-    filter_condition=f'{MODE_COLUMN} != "MT"',
+    filter_condition='Linked_Mode_txt != "MT"',
     category_mapping=service_mapping,
     prefix='calib_share'
 )
@@ -918,7 +957,7 @@ df_transit_by_access = calculate_categorical_shares(
     category_col='Ac_Mode2_Model',
     weight_col='trip_weight',
     group_cols=['Veh_Cat3p', 'Purp5_text', 'PK_OK'],
-    filter_condition='Linked_Mode_txt_crt != "MT"',
+    filter_condition='Linked_Mode_txt != "MT"',
     category_mapping=access_mapping,
     prefix='calib_share'
 )
@@ -941,9 +980,11 @@ print("=" * 60)
 # Base walk-to-transit mapping
 walk_service_mapping = {
     'LCL': 'wlocal',
+    'COR': 'wcore',
     'EXP': 'wexpress',
     'LRT': 'wlrt',
-    'BRT': 'wbrt',
+    'CRT': 'wcrt',
+    'BRT': 'wbrt'
 }
 
 # Auto-generate CRT mappings
@@ -954,10 +995,10 @@ for crt_cat in crt_categories:
 # 8. Walk-to-Transit by Service Type
 df_walk_to_transit = calculate_categorical_shares(
     df_obs_linked,
-    category_col=MODE_COLUMN,
+    category_col='Linked_Mode_txt',
     weight_col='trip_weight',
     group_cols=['Veh_Cat3p', 'Purp5_text', 'PK_OK'],
-    filter_condition=f'Ac_Mode2_Model == "Walk" & {MODE_COLUMN} != "MT"',
+    filter_condition='Ac_Mode2_Model == "Walk" & Linked_Mode_txt != "MT"',
     category_mapping=walk_service_mapping,
     prefix='calib_share'
 )
@@ -981,23 +1022,20 @@ print("=" * 60)
 # Base drive-to-transit mapping
 drive_service_mapping = {
     'LCL': 'dlocal',
+    'COR': 'dcore',
     'EXP': 'dexpress',
     'LRT': 'dlrt',
+    'CRT': 'dcrt',
     'BRT': 'dbrt',
 }
-
-# Auto-generate CRT mappings
-for crt_cat in crt_categories:
-    suffix = '' if crt_cat == 'CRT' else crt_cat.split('_')[1].lower()
-    drive_service_mapping[crt_cat] = f'dcrt{suffix}'
 
 # 9. Drive-to-Transit by Service Type
 df_drive_to_transit = calculate_categorical_shares(
     df_obs_linked,
-    category_col=MODE_COLUMN,  # Changed
+    category_col='Linked_Mode_txt',
     weight_col='trip_weight',
     group_cols=['Veh_Cat3p', 'Purp5_text', 'PK_OK'],
-    filter_condition=f'Ac_Mode2_Model == "Drive" & {MODE_COLUMN} != "MT"',  # Updated
+    filter_condition='Ac_Mode2_Model == "Drive" & Linked_Mode_txt != "MT"',
     category_mapping=drive_service_mapping,
     prefix='calib_share'
 )
@@ -1007,6 +1045,153 @@ print("\nFirst few rows:")
 print(df_drive_to_transit.head(10))
 print("\nVerification:")
 verify_shares(df_drive_to_transit)
+```
+
+# Expand CRT Categories
+
+## Define Expansion Function
+
+```{python}
+def expand_crt_categories(df_shares, crt_purpose_props, crt_var_prefix='crt'):
+    """
+    Expand single CRT category into detailed CRT subclasses.
+
+    Parameters:
+    -----------
+    df_shares : DataFrame
+        DataFrame with shares including single CRT category
+    crt_purpose_props : dict
+        Dictionary mapping Purpose -> {class_CRT: proportion}
+    crt_var_prefix : str
+        Prefix for CRT variable (e.g., 'crt', 'wcrt', 'dcrt')
+
+    Returns:
+    --------
+    DataFrame with expanded CRT categories
+    """
+    df_expanded = df_shares.copy()
+
+    # Find all CRT rows (e.g., calib_share_crt_all, calib_share_wcrt_2veh)
+    crt_pattern = f'calib_share_{crt_var_prefix}_'
+    crt_rows = df_expanded.index[df_expanded.index.str.contains(crt_pattern)].tolist()
+
+    if len(crt_rows) == 0:
+        return df_expanded
+
+    # Dictionary to store new rows
+    new_rows_dict = {}
+
+    for crt_row in crt_rows:
+        # Extract vehicle category from variable name
+        # e.g., "calib_share_crt_all" -> "all"
+        # e.g., "calib_share_wcrt_2veh" -> "2veh"
+        veh_cat = crt_row.split('_')[-1]
+
+        # Get CRT share for each purpose/period combination
+        for col in df_expanded.columns:
+            purpose, period = col
+
+            crt_share = df_expanded.loc[crt_row, col]
+
+            # Skip if CRT share is 0 or purpose not in props
+            if crt_share == 0 or purpose not in crt_purpose_props:
+                continue
+
+            # Expand into CRT subclasses
+            for crt_class, crt_prop in crt_purpose_props[purpose].items():
+                # Create variable name for this CRT subclass
+                # e.g., "calib_share_crt00_all", "calib_share_wcrt01_2veh"
+                crt_suffix = crt_class.lower().replace('_', '')  # CRT_00 -> crt00
+                new_var_name = f"calib_share_{crt_var_prefix}{crt_suffix[3:]}_{veh_cat}"
+
+                # Calculate expanded share
+                expanded_share = crt_share * crt_prop
+
+                # Initialize row if it doesn't exist
+                if new_var_name not in new_rows_dict:
+                    new_rows_dict[new_var_name] = pd.Series(0.0, index=df_expanded.columns, name=new_var_name)
+
+                # Set the value
+                new_rows_dict[new_var_name][col] = expanded_share
+
+    # Add new rows and remove old CRT rows
+    if new_rows_dict:
+        # Remove original single CRT rows first
+        df_result = df_expanded.drop(crt_rows)
+
+        # Convert new rows dict to DataFrame and concatenate
+        df_new_rows = pd.DataFrame.from_dict(new_rows_dict, orient='index')
+        df_result = pd.concat([df_result, df_new_rows], axis=0)
+
+        # Sort index (now all indices should be strings)
+        return df_result.sort_index()
+
+    return df_expanded
+```
+
+## Expand Transit Dataframes
+
+### By Service Type
+
+```{python}
+# Expand CRT in transit by service
+print("\nExpanding CRT in Transit by Service...")
+df_transit_by_service_expanded = expand_crt_categories(
+    df_transit_by_service,
+    crt_purpose_props,
+    crt_var_prefix='crt'
+)
+print(f"  Original shape: {df_transit_by_service.shape}")
+print(f"  Expanded shape: {df_transit_by_service_expanded.shape}")
+print("\nVerification after expansion:")
+verify_shares(df_transit_by_service_expanded)
+```
+
+```{python}
+# Replace original dataframes with expanded versions
+df_transit_by_service = df_transit_by_service_expanded
+```
+
+### By Walk Access
+
+```{python}
+# Expand CRT in walk-to-transit
+print("\nExpanding CRT in Walk-to-Transit...")
+df_walk_to_transit_expanded = expand_crt_categories(
+    df_walk_to_transit,
+    crt_purpose_props,
+    crt_var_prefix='wcrt'
+)
+print(f"  Original shape: {df_walk_to_transit.shape}")
+print(f"  Expanded shape: {df_walk_to_transit_expanded.shape}")
+print("\nVerification after expansion:")
+verify_shares(df_walk_to_transit_expanded)
+```
+
+```{python}
+# Replace original dataframes with expanded versions
+df_walk_to_transit = df_walk_to_transit_expanded
+```
+
+### By Drive Access
+
+```{python}
+# Expand CRT in drive-to-transit
+print("\nExpanding CRT in Drive-to-Transit...")
+df_drive_to_transit_expanded = expand_crt_categories(
+    df_drive_to_transit,
+    crt_purpose_props,
+    crt_var_prefix='dcrt'
+)
+print(f"  Original shape: {df_drive_to_transit.shape}")
+print(f"  Expanded shape: {df_drive_to_transit_expanded.shape}")
+print("\nVerification after expansion:")
+verify_shares(df_drive_to_transit_expanded)
+```
+
+```{python}
+# Replace original dataframes with expanded versions
+df_drive_to_transit = df_drive_to_transit_expanded
 ```
 
 # Export Calibration Target Files
@@ -1132,21 +1317,24 @@ def create_tree_dataframe(
     # ========================================================================
     walk_transit_base = total_value * motor_share * transit_share * walkacc_share * 100
 
-    # Dynamically add all walk-to-transit service types
-    for service_code, service_var in walk_service_mapping.items():
-        service_share = get_value(df_walk_to_transit, service_var, purpose, veh_cat, period)
+    # Get all walk-to-transit variables from the expanded dataframe
+    walk_vars = [idx for idx in df_walk_to_transit.index if idx.startswith('calib_share_w')]
 
-        # Determine display name
-        if service_code == 'CRT':
-            display_name = 'CRT'
-        elif service_code.startswith('CRT_'):
-            display_name = service_code  # e.g., 'CRT_00', 'CRT_01'
-        else:
-            display_name = service_code  # e.g., 'Local Bus', 'LRT'
+    for walk_var in walk_vars:
+        # Extract service name from variable (e.g., calib_share_wlrt_all -> LRT)
+        parts = walk_var.replace('calib_share_w', '').split('_')
+        service_name = parts[0].upper()  # e.g., 'lrt' -> 'LRT', 'crt00' -> 'CRT00'
+
+        if service_name.startswith('CRT'):
+            # Format CRT subclasses as CRT_00, CRT_01, etc.
+            if len(service_name) > 3:
+                service_name = f"CRT_{service_name[3:]}"
+
+        service_share = get_value(df_walk_to_transit, walk_var.replace('calib_share_', '').rsplit('_', 1)[0], purpose, veh_cat, period)
 
         rows.append({
             'purpose': purpose, 'period': display_period, 'veh_cat': veh_cat,
-            'level1': 'Motorized', 'level2': 'Transit', 'level3': 'Walk-to-Transit', 'level4': display_name,
+            'level1': 'Motorized', 'level2': 'Transit', 'level3': 'Walk-to-Transit', 'level4': service_name,
             'value': walk_transit_base * service_share
         })
 
@@ -1155,27 +1343,31 @@ def create_tree_dataframe(
     # ========================================================================
     drive_transit_base = total_value * motor_share * transit_share * driveacc_share * 100
 
-    # Dynamically add all drive-to-transit service types
-    for service_code, service_var in drive_service_mapping.items():
-        service_share = get_value(df_drive_to_transit, service_var, purpose, veh_cat, period)
+    # Get all drive-to-transit variables from the expanded dataframe
+    drive_vars = [idx for idx in df_drive_to_transit.index if idx.startswith('calib_share_d')]
 
-        # Determine display name
-        if service_code == 'CRT':
-            display_name = 'CRT'
-        elif service_code.startswith('CRT_'):
-            display_name = service_code
-        else:
-            display_name = service_code
+    for drive_var in drive_vars:
+        # Extract service name from variable (e.g., calib_share_dlrt_all -> LRT)
+        parts = drive_var.replace('calib_share_d', '').split('_')
+        service_name = parts[0].upper()  # e.g., 'lrt' -> 'LRT', 'crt00' -> 'CRT00'
+
+        if service_name.startswith('CRT'):
+            # Format CRT subclasses as CRT_00, CRT_01, etc.
+            if len(service_name) > 3:
+                service_name = f"CRT_{service_name[3:]}"
+
+        service_share = get_value(df_drive_to_transit, drive_var.replace('calib_share_', '').rsplit('_', 1)[0], purpose, veh_cat, period)
 
         rows.append({
             'purpose': purpose, 'period': display_period, 'veh_cat': veh_cat,
-            'level1': 'Motorized', 'level2': 'Transit', 'level3': 'Drive-to-Transit', 'level4': display_name,
+            'level1': 'Motorized', 'level2': 'Transit', 'level3': 'Drive-to-Transit', 'level4': service_name,
             'value': drive_transit_base * service_share
         })
 
     return pd.DataFrame(rows)
+```
 
-
+```{python}
 # Create comprehensive dataframe with all combinations
 
 # Define all categories
@@ -1632,6 +1824,7 @@ def export_calib_file(purpose, period, include_veh_categories=True):
 
         # =====================================================================
         # SECTION 6: Transit by Service Type (within transit)
+        # NOTE: This section now includes expanded CRT subclasses (crt00, crt01, etc.)
         # =====================================================================
         f.write(";relative within transit\t\t\n")
 
@@ -1674,6 +1867,7 @@ def export_calib_file(purpose, period, include_veh_categories=True):
 
         # =====================================================================
         # SECTION 8: Walk-to-Transit by Service (within walkacc)
+        # NOTE: This section now includes expanded CRT subclasses (wcrt00, wcrt01, etc.)
         # =====================================================================
         f.write(";relative within walkacc\t\t\n")
 
@@ -1692,6 +1886,7 @@ def export_calib_file(purpose, period, include_veh_categories=True):
 
         # =====================================================================
         # SECTION 9: Drive-to-Transit by Service (within driveacc)
+        # NOTE: This section now includes expanded CRT subclasses (dcrt00, dcrt01, etc.)
         # =====================================================================
         f.write(";relative within driveacc\t\t\n")
 
