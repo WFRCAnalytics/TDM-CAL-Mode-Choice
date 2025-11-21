@@ -416,7 +416,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="import-libraries" class="level2" data-number="1.2">
 <h2 data-number="1.2" class="anchored" data-anchor-id="import-libraries"><span class="header-section-number">1.2</span> Import Libraries</h2>
-<div id="c7970b1a" class="cell" data-execution_count="1">
+<div id="47416889" class="cell" data-execution_count="1">
 <details class="code-fold">
 <summary>Show the code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
@@ -441,7 +441,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="environment-variables" class="level2" data-number="1.3">
 <h2 data-number="1.3" class="anchored" data-anchor-id="environment-variables"><span class="header-section-number">1.3</span> Environment Variables</h2>
-<div id="a8b13636" class="cell" data-execution_count="2">
+<div id="ff21c54d" class="cell" data-execution_count="2">
 <details class="code-fold">
 <summary>Show the code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>PROJECT_CRS <span class="op">=</span> <span class="st">"EPSG:3566"</span>  <span class="co"># NAD83 / Utah North (ftUS)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -450,7 +450,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="helper-functions" class="level2" data-number="1.4">
 <h2 data-number="1.4" class="anchored" data-anchor-id="helper-functions"><span class="header-section-number">1.4</span> Helper Functions</h2>
-<div id="6f5c0115" class="cell" data-execution_count="3">
+<div id="fe937a90" class="cell" data-execution_count="3">
 <details class="code-fold">
 <summary>Show the code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> fetch_github(</span>
@@ -503,7 +503,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h1 data-number="2"><span class="header-section-number">2</span> Load Data</h1>
 <section id="taz-shapefile" class="level2" data-number="2.1">
 <h2 data-number="2.1" class="anchored" data-anchor-id="taz-shapefile"><span class="header-section-number">2.1</span> TAZ Shapefile</h2>
-<div id="6c8c8c0b" class="cell" data-execution_count="4">
+<div id="29f3a0e8" class="cell" data-execution_count="4">
 <details class="code-fold">
 <summary>Show the code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>gdf_taz_v10 <span class="op">=</span> gpd.read_file(</span>
@@ -511,7 +511,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>).to_crs(PROJECT_CRS)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
-<div id="e1fec5a6" class="cell" data-execution_count="5">
+<div id="2eb7aa95" class="cell" data-execution_count="5">
 <details class="code-fold">
 <summary>Show the code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>gdf_taz_v10.explore()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -521,7 +521,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="processed-on-board-survey-data" class="level2" data-number="2.2">
 <h2 data-number="2.2" class="anchored" data-anchor-id="processed-on-board-survey-data"><span class="header-section-number">2.2</span> Processed On-Board Survey Data</h2>
 <p>This dataset is the output from the <a href="https://github.com/WFRCAnalytics/DATA-OBS-Prep-For-TDM">“previous step”</a>, which contains all the calculated access and egress distances and times.</p>
-<div id="56ab214d" class="cell" data-execution_count="6">
+<div id="7d405de7" class="cell" data-execution_count="6">
 <details class="code-fold">
 <summary>Show the code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Read Linked UTA On-Board Survey Data directly from GitHub repo</span></span>
@@ -537,7 +537,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>df_obs_linked</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output cell-output-stderr">
-<pre><code>C:\Users\Pukar.Bhandari\AppData\Local\Temp\ipykernel_8512\3049727246.py:7: DtypeWarning:
+<pre><code>C:\Users\Pukar.Bhandari\AppData\Local\Temp\ipykernel_21476\3049727246.py:7: DtypeWarning:
 
 Columns (8,24,32,37,54,132,137,174,287) have mixed types. Specify dtype option on import or set low_memory=False.
 </code></pre>
@@ -852,7 +852,7 @@ Columns (8,24,32,37,54,132,137,174,287) have mixed types. Specify dtype option o
 <section id="load-masternetwork-nodes" class="level3">
 <h3 class="anchored" data-anchor-id="load-masternetwork-nodes">Load MasterNetwork Nodes</h3>
 <p>The MasterNetwork contains all nodes in the regional transportation network - roadway intersections, transit stops, park-and-ride locations, etc. We load the complete network first, then filter to just transit-related nodes.</p>
-<div id="3a23a2e8" class="cell" data-execution_count="7">
+<div id="17f3277b" class="cell" data-execution_count="7">
 <details class="code-fold">
 <summary>Show the code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Load all nodes from MasterNetwork</span></span>
@@ -862,7 +862,7 @@ Columns (8,24,32,37,54,132,137,174,287) have mixed types. Specify dtype option o
 <span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>).to_crs(PROJECT_CRS)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
-<div id="8304a1a3" class="cell" data-execution_count="8">
+<div id="09e774c7" class="cell" data-execution_count="8">
 <details class="code-fold">
 <summary>Show the code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>gdf_masternet_nodes.explore()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -872,7 +872,7 @@ Columns (8,24,32,37,54,132,137,174,287) have mixed types. Specify dtype option o
 <section id="filter-to-transit-stop-nodes" class="level3">
 <h3 class="anchored" data-anchor-id="filter-to-transit-stop-nodes">Filter to Transit Stop Nodes</h3>
 <p>Not all nodes in the MasterNetwork are transit stops. The c_StopsAllModes.dbf file contains a list of node IDs that represent actual transit stops. We filter the network to only these nodes, giving us the set of locations where we can calculate walk access/egress distances.</p>
-<div id="6e8863a7" class="cell" data-execution_count="10">
+<div id="8e26a36a" class="cell" data-execution_count="10">
 <details class="code-fold">
 <summary>Show the code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Read all mode-specific stop files and combine into one dataframe</span></span>
@@ -886,7 +886,7 @@ Columns (8,24,32,37,54,132,137,174,287) have mixed types. Specify dtype option o
 <span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>df_stop_nodes_list[<span class="st">'N'</span>] <span class="op">=</span> df_stop_nodes_list[<span class="st">'N'</span>].astype(<span class="st">'Int64'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
-<div id="f8f10673" class="cell" data-execution_count="11">
+<div id="218f19f9" class="cell" data-execution_count="11">
 <details class="code-fold">
 <summary>Show the code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>df_stop_nodes_list</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -1002,7 +1002,7 @@ Columns (8,24,32,37,54,132,137,174,287) have mixed types. Specify dtype option o
 </div>
 </div>
 </div>
-<div id="3bdc5c78" class="cell" data-execution_count="12">
+<div id="5a4cbb1a" class="cell" data-execution_count="12">
 <details class="code-fold">
 <summary>Show the code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Join to get geometry for each N-MODE combination</span></span>
@@ -1014,7 +1014,7 @@ Columns (8,24,32,37,54,132,137,174,287) have mixed types. Specify dtype option o
 <span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
-<div id="8152ce7c" class="cell" data-execution_count="13">
+<div id="117d7cc3" class="cell" data-execution_count="13">
 <details class="code-fold">
 <summary>Show the code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>df_stop_nodes.explore()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -1040,7 +1040,7 @@ Tip
 <p>Skim matrices were copied from <code>\\ModelAce\ModelAce-E\1 - TDM\1 - Official Release (full run)\v9x\v9.1\v9.1.1\WF-TDM-v9.1.1 - revised-se\Scenarios\OY_2023\4_ModeChoice\1a_Skims</code> (For this exact run, skim matrices were used from modified NTL runs.)</p>
 </div>
 </div>
-<div id="8f51af77" class="cell" data-execution_count="14">
+<div id="9dc2c386" class="cell" data-execution_count="14">
 <details class="code-fold">
 <summary>Show the code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define output files to check</span></span>
@@ -1066,14 +1066,15 @@ Tip
 <span id="cb15-21"><a href="#cb15-21" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">"OMX files already exist, skipping conversion."</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output cell-output-stdout">
-<pre><code>OMX files already exist, skipping conversion.</code></pre>
+<pre><code>Converting matrices to OMX format...
+Conversion complete!</code></pre>
 </div>
 </div>
 </section>
 </section>
 <section id="read-matrices" class="level2" data-number="2.5">
 <h2 data-number="2.5" class="anchored" data-anchor-id="read-matrices"><span class="header-section-number">2.5</span> Read Matrices</h2>
-<div id="5f622289" class="cell" data-execution_count="15">
+<div id="0736c4ef" class="cell" data-execution_count="15">
 <details class="code-fold">
 <summary>Show the code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Read Matrices as DataFrames</span></span>
@@ -1087,7 +1088,7 @@ Tip
 </section>
 <section id="process-matrix" class="level1" data-number="3">
 <h1 data-number="3"><span class="header-section-number">3</span> Process Matrix</h1>
-<div id="020e47ae" class="cell" data-execution_count="16">
+<div id="6bc14caa" class="cell" data-execution_count="16">
 <details class="code-fold">
 <summary>Show the code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create Peak composite matrix - max of walk and drive in both directions</span></span>
@@ -1101,7 +1102,7 @@ Tip
 <span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>skim_pk <span class="op">=</span> pd.DataFrame(skim_pk, index<span class="op">=</span>omx_w8_pk.index, columns<span class="op">=</span>omx_w8_pk.columns)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
-<div id="a2402c54" class="cell" data-execution_count="17">
+<div id="7b8c1afe" class="cell" data-execution_count="17">
 <details class="code-fold">
 <summary>Show the code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create Off-peak composite matrix - max of walk and drive in both directions</span></span>
@@ -1119,7 +1120,7 @@ Tip
 <h1 data-number="4"><span class="header-section-number">4</span> Process Data</h1>
 <section id="assign-which-matrix-to-process-for-each-row" class="level2" data-number="4.1">
 <h2 data-number="4.1" class="anchored" data-anchor-id="assign-which-matrix-to-process-for-each-row"><span class="header-section-number">4.1</span> Assign which matrix to process for each row</h2>
-<div id="60a6cfec" class="cell" data-execution_count="18">
+<div id="b34cbd4a" class="cell" data-execution_count="18">
 <details class="code-fold">
 <summary>Show the code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create uses_crt column once</span></span>
@@ -1129,7 +1130,7 @@ Tip
 </section>
 <section id="calculate-crt-distances" class="level2" data-number="4.2">
 <h2 data-number="4.2" class="anchored" data-anchor-id="calculate-crt-distances"><span class="header-section-number">4.2</span> Calculate CRT Distances</h2>
-<div id="97647963" class="cell" data-execution_count="19">
+<div id="234ba1da" class="cell" data-execution_count="19">
 <details class="code-fold">
 <summary>Show the code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Calculate CRT Distances - simplified with composite matrices</span></span>
@@ -1141,7 +1142,7 @@ Tip
 <span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
-<div id="51fcf63a" class="cell" data-execution_count="20">
+<div id="84808923" class="cell" data-execution_count="20">
 <details class="code-fold">
 <summary>Show the code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb22"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Initialize column</span></span>
@@ -1226,7 +1227,7 @@ Tip
 </div>
 </div>
 </div>
-<div id="6db57254" class="cell" data-execution_count="21">
+<div id="5b8c8ece" class="cell" data-execution_count="21">
 <details class="code-fold">
 <summary>Show the code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>crt_dist_count <span class="op">=</span> (</span>
@@ -1257,6 +1258,46 @@ Tip
 </thead>
 <tbody>
 <tr class="odd">
+<th data-quarto-table-cell-role="th">8500</th>
+<td>21613</td>
+<td>OK</td>
+<td>Drive</td>
+<td>Walk</td>
+<td>1981.0</td>
+<td>965.0</td>
+<td>0.00</td>
+</tr>
+<tr class="even">
+<th data-quarto-table-cell-role="th">2893</th>
+<td>11857</td>
+<td>OK</td>
+<td>Drive</td>
+<td>Walk</td>
+<td>607.0</td>
+<td>720.0</td>
+<td>0.00</td>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">12284</th>
+<td>27908</td>
+<td>PK</td>
+<td>Walk</td>
+<td>Walk</td>
+<td>1719.0</td>
+<td>1987.0</td>
+<td>0.00</td>
+</tr>
+<tr class="even">
+<th data-quarto-table-cell-role="th">12315</th>
+<td>27973</td>
+<td>PK</td>
+<td>Walk</td>
+<td>Walk</td>
+<td>2434.0</td>
+<td>2725.0</td>
+<td>0.00</td>
+</tr>
+<tr class="odd">
 <th data-quarto-table-cell-role="th">12364</th>
 <td>28075</td>
 <td>OK</td>
@@ -1264,46 +1305,6 @@ Tip
 <td>Walk</td>
 <td>883.0</td>
 <td>1036.0</td>
-<td>0.00</td>
-</tr>
-<tr class="even">
-<th data-quarto-table-cell-role="th">11142</th>
-<td>25998</td>
-<td>OK</td>
-<td>Drive</td>
-<td>Drive</td>
-<td>264.0</td>
-<td>2701.0</td>
-<td>0.00</td>
-</tr>
-<tr class="odd">
-<th data-quarto-table-cell-role="th">13229</th>
-<td>29441</td>
-<td>PK</td>
-<td>Walk</td>
-<td>Drive</td>
-<td>356.0</td>
-<td>541.0</td>
-<td>0.00</td>
-</tr>
-<tr class="even">
-<th data-quarto-table-cell-role="th">712</th>
-<td>7675</td>
-<td>PK</td>
-<td>Drive</td>
-<td>Walk</td>
-<td>1923.0</td>
-<td>541.0</td>
-<td>0.00</td>
-</tr>
-<tr class="odd">
-<th data-quarto-table-cell-role="th">4355</th>
-<td>14541</td>
-<td>PK</td>
-<td>Drive</td>
-<td>Walk</td>
-<td>743.0</td>
-<td>1007.0</td>
 <td>0.00</td>
 </tr>
 <tr class="even">
@@ -1327,6 +1328,26 @@ Tip
 <td>81.08</td>
 </tr>
 <tr class="even">
+<th data-quarto-table-cell-role="th">10396</th>
+<td>24688</td>
+<td>PK</td>
+<td>Drive</td>
+<td>Walk</td>
+<td>2990.0</td>
+<td>437.0</td>
+<td>81.08</td>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">11054</th>
+<td>25871</td>
+<td>PK</td>
+<td>Drive</td>
+<td>Drive</td>
+<td>2961.0</td>
+<td>390.0</td>
+<td>81.08</td>
+</tr>
+<tr class="even">
 <th data-quarto-table-cell-role="th">2338</th>
 <td>10844</td>
 <td>PK</td>
@@ -1337,32 +1358,12 @@ Tip
 <td>81.08</td>
 </tr>
 <tr class="odd">
-<th data-quarto-table-cell-role="th">10396</th>
-<td>24688</td>
-<td>PK</td>
-<td>Drive</td>
-<td>Walk</td>
-<td>2990.0</td>
-<td>437.0</td>
-<td>81.08</td>
-</tr>
-<tr class="even">
 <th data-quarto-table-cell-role="th">445</th>
 <td>7112</td>
 <td>PK</td>
 <td>Drive</td>
 <td>Walk</td>
 <td>249.0</td>
-<td>2939.0</td>
-<td>81.08</td>
-</tr>
-<tr class="odd">
-<th data-quarto-table-cell-role="th">673</th>
-<td>7617</td>
-<td>OK</td>
-<td>Drive</td>
-<td>Walk</td>
-<td>338.0</td>
 <td>2939.0</td>
 <td>81.08</td>
 </tr>
@@ -1373,16 +1374,16 @@ Tip
 </div>
 </div>
 </div>
-<div id="44913af5" class="cell" data-execution_count="22">
+<div id="2697374f" class="cell" data-execution_count="22">
 <details class="code-fold">
 <summary>Show the code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb24"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>(df_obs_linked[df_obs_linked[<span class="st">'dist_CRT'</span>] <span class="op">==</span> <span class="dv">0</span>][<span class="st">'trip_weight'</span>].<span class="bu">sum</span>() <span class="op">/</span> df_obs_linked[<span class="st">'trip_weight'</span>].<span class="bu">sum</span>()) <span class="op">*</span> <span class="dv">100</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output cell-output-display" data-execution_count="18">
-<pre><code>0.7107702342099061</code></pre>
+<pre><code>0.2164957499507889</code></pre>
 </div>
 </div>
-<div id="93774766" class="cell" data-execution_count="23">
+<div id="360a8acf" class="cell" data-execution_count="23">
 <details class="code-fold">
 <summary>Show the code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb26"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Set seaborn style</span></span>
@@ -1441,7 +1442,7 @@ Tip
 </section>
 <section id="assign-crt-class-for-each-bins" class="level2" data-number="4.3">
 <h2 data-number="4.3" class="anchored" data-anchor-id="assign-crt-class-for-each-bins"><span class="header-section-number">4.3</span> Assign CRT Class for each bins</h2>
-<div id="4e8c42a3" class="cell" data-execution_count="24">
+<div id="68eab813" class="cell" data-execution_count="24">
 <details class="code-fold">
 <summary>Show the code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb27"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create CRT distance classes using pd.cut</span></span>
@@ -1458,19 +1459,19 @@ Tip
 </details>
 <div class="cell-output cell-output-display" data-execution_count="20">
 <pre><code>class_CRT
-CRT_00    158
-CRT_01    316
-CRT_02    478
-CRT_03    751
-CRT_04    361
-CRT_05     55
-CRT_06     40
-CRT_07     19
-CRT_08      9
+CRT_00    168
+CRT_01    309
+CRT_02    489
+CRT_03    799
+CRT_04    369
+CRT_05     63
+CRT_06     47
+CRT_07     25
+CRT_08      8
 Name: count, dtype: int64</code></pre>
 </div>
 </div>
-<div id="1037529c" class="cell" data-execution_count="25">
+<div id="fe0c6e2e" class="cell" data-execution_count="25">
 <details class="code-fold">
 <summary>Show the code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb29"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>df_obs_linked.<span class="bu">filter</span>(regex<span class="op">=</span><span class="st">'(_LAT|_LONG)$'</span>).columns</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -1494,7 +1495,7 @@ Name: count, dtype: int64</code></pre>
       dtype='object')</code></pre>
 </div>
 </div>
-<div id="84cd3f2d" class="cell" data-execution_count="26">
+<div id="b43d4981" class="cell" data-execution_count="26">
 <details class="code-fold">
 <summary>Show the code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb31"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> folium</span>
@@ -2002,7 +2003,7 @@ Name: count, dtype: int64</code></pre>
 <h1 data-number="5"><span class="header-section-number">5</span> Export</h1>
 <section id="save-obs-data-with-crt-links" class="level2" data-number="5.1">
 <h2 data-number="5.1" class="anchored" data-anchor-id="save-obs-data-with-crt-links"><span class="header-section-number">5.1</span> Save OBS data with CRT Links</h2>
-<div id="72f70860" class="cell" data-execution_count="27">
+<div id="b347a733" class="cell" data-execution_count="27">
 <details class="code-fold">
 <summary>Show the code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb32"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create output directory if it doesn't exist</span></span>
