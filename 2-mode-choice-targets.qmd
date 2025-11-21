@@ -42,7 +42,12 @@ load_dotenv()
 
 ## Environment Variables
 
+```{python}
+USE_CRT_CLASSES = True  # Set to False to use single CRT category
 
+# Determine which column to use for mode analysis
+MODE_COLUMN = 'Linked_Mode_txt_crt' if USE_CRT_CLASSES else 'Linked_Mode_txt'
+```
 
 ## Helper Functions
 
@@ -467,6 +472,12 @@ df_obs_linked['Linked_Mode_txt_crt'] = np.where(
 df_obs_linked[['Linked_Mode_txt', 'class_CRT', 'Linked_Mode_txt_crt']]
 ```
 
+```{python}
+# Auto-generate CRT mappings based on available data
+unique_modes = df_obs_linked[MODE_COLUMN].dropna().unique()
+crt_categories = sorted([mode for mode in unique_modes if mode.startswith('CRT')])
+```
+
 # Process HTS to get needed vars
 
 OBS has already been processed in OBS Prep repo. So, this section will only Process HTS data to get needed columns.
@@ -857,30 +868,27 @@ print("\n" + "=" * 60)
 print("6. TRANSIT BY SERVICE TYPE")
 print("=" * 60)
 
+# Base service mapping
 service_mapping = {
     'LCL': 'local',
     'COR': 'core',
     'EXP': 'express',
     'LRT': 'lrt',
     'BRT': 'brt',
-    'CRT': 'crt',
-    'CRT_00': 'crt00',
-    'CRT_01': 'crt01',
-    'CRT_02': 'crt02',
-    'CRT_03': 'crt03',
-    'CRT_04': 'crt04',
-    'CRT_05': 'crt05',
-    'CRT_06': 'crt06',
-    'CRT_07': 'crt07',
-    'CRT_08': 'crt08'
 }
 
+# Auto-generate CRT mappings
+for crt_cat in crt_categories:
+    suffix = '' if crt_cat == 'CRT' else crt_cat.split('_')[1].lower()
+    service_mapping[crt_cat] = f'crt{suffix}'
+
+# 6. Transit by Service Type
 df_transit_by_service = calculate_categorical_shares(
     df_obs_linked,
-    category_col='Linked_Mode_txt_crt',
+    category_col=MODE_COLUMN,
     weight_col='trip_weight',
     group_cols=['Veh_Cat3p', 'Purp5_text', 'PK_OK'],
-    filter_condition='Linked_Mode_txt_crt != "MT"',
+    filter_condition=f'{MODE_COLUMN} != "MT"',
     category_mapping=service_mapping,
     prefix='calib_share'
 )
@@ -930,29 +938,26 @@ print("\n" + "=" * 60)
 print("8. WALK-TO-TRANSIT BY SERVICE TYPE")
 print("=" * 60)
 
+# Base walk-to-transit mapping
 walk_service_mapping = {
     'LCL': 'wlocal',
     'EXP': 'wexpress',
     'LRT': 'wlrt',
     'BRT': 'wbrt',
-    'CRT': 'wcrt',
-    'CRT_00': 'wcrt00',
-    'CRT_01': 'wcrt01',
-    'CRT_02': 'wcrt02',
-    'CRT_03': 'wcrt03',
-    'CRT_04': 'wcrt04',
-    'CRT_05': 'wcrt05',
-    'CRT_06': 'wcrt06',
-    'CRT_07': 'wcrt07',
-    'CRT_08': 'wcrt08'
 }
 
+# Auto-generate CRT mappings
+for crt_cat in crt_categories:
+    suffix = '' if crt_cat == 'CRT' else crt_cat.split('_')[1].lower()
+    walk_service_mapping[crt_cat] = f'wcrt{suffix}'
+
+# 8. Walk-to-Transit by Service Type
 df_walk_to_transit = calculate_categorical_shares(
     df_obs_linked,
-    category_col='Linked_Mode_txt_crt',
+    category_col=MODE_COLUMN,
     weight_col='trip_weight',
     group_cols=['Veh_Cat3p', 'Purp5_text', 'PK_OK'],
-    filter_condition='Ac_Mode2_Model == "Walk" & Linked_Mode_txt_crt != "MT"',
+    filter_condition=f'Ac_Mode2_Model == "Walk" & {MODE_COLUMN} != "MT"',
     category_mapping=walk_service_mapping,
     prefix='calib_share'
 )
@@ -973,29 +978,26 @@ print("\n" + "=" * 60)
 print("9. DRIVE-TO-TRANSIT BY SERVICE TYPE")
 print("=" * 60)
 
+# Base drive-to-transit mapping
 drive_service_mapping = {
     'LCL': 'dlocal',
     'EXP': 'dexpress',
     'LRT': 'dlrt',
     'BRT': 'dbrt',
-    'CRT': 'dcrt',
-    'CRT_00': 'dcrt00',
-    'CRT_01': 'dcrt01',
-    'CRT_02': 'dcrt02',
-    'CRT_03': 'dcrt03',
-    'CRT_04': 'dcrt04',
-    'CRT_05': 'dcrt05',
-    'CRT_06': 'dcrt06',
-    'CRT_07': 'dcrt07',
-    'CRT_08': 'dcrt08'
 }
 
+# Auto-generate CRT mappings
+for crt_cat in crt_categories:
+    suffix = '' if crt_cat == 'CRT' else crt_cat.split('_')[1].lower()
+    drive_service_mapping[crt_cat] = f'dcrt{suffix}'
+
+# 9. Drive-to-Transit by Service Type
 df_drive_to_transit = calculate_categorical_shares(
     df_obs_linked,
-    category_col='Linked_Mode_txt_crt',
+    category_col=MODE_COLUMN,  # Changed
     weight_col='trip_weight',
     group_cols=['Veh_Cat3p', 'Purp5_text', 'PK_OK'],
-    filter_condition='Ac_Mode2_Model == "Drive" & Linked_Mode_txt_crt != "MT"',
+    filter_condition=f'Ac_Mode2_Model == "Drive" & {MODE_COLUMN} != "MT"',  # Updated
     category_mapping=drive_service_mapping,
     prefix='calib_share'
 )
@@ -1028,17 +1030,7 @@ def create_tree_dataframe(
 ):
     """
     Create a hierarchical dataframe using path format.
-    Each row represents one node with its full path from root.
-    Returns dataframe with level1, level2, level3, level4, and value columns.
-
-    Parameters:
-    -----------
-    purpose : str
-        Trip purpose (e.g., 'HBW', 'HBO', 'NHB', 'HBC', 'HBSch')
-    veh_cat : str
-        Vehicle category ('all', '0veh', '1veh', '2veh', '3veh')
-    period : str or None
-        Time period ('PK', 'OK', 'Daily', or None to average PK+OK)
+    Automatically handles any number of CRT classes based on available data.
     """
 
     def get_value(df, var_name, purpose, veh_cat='all', period=None):
@@ -1048,7 +1040,6 @@ def create_tree_dataframe(
         if var_full not in df.index:
             return 0.0
 
-        # If specific period is requested
         if period:
             if (purpose, period) in df.columns:
                 val = df.loc[var_full, (purpose, period)]
@@ -1075,7 +1066,7 @@ def create_tree_dataframe(
 
         return total / count if count > 0 else 0.0
 
-    # Get all conditional shares
+    # Get all conditional shares (non-transit)
     nonmotor_share = get_value(df_alltrips_cat, 'nonmotor', purpose, veh_cat, period)
     motor_share = 1.0 - nonmotor_share
 
@@ -1094,448 +1085,95 @@ def create_tree_dataframe(
     walkacc_share = get_value(df_transit_by_access, 'walkacc', purpose, veh_cat, period)
     driveacc_share = get_value(df_transit_by_access, 'driveacc', purpose, veh_cat, period)
 
-    # Get walk-to-transit service type shares
-    wlocal_share = get_value(df_walk_to_transit, 'wlocal', purpose, veh_cat, period)
-    wcore_share = get_value(df_walk_to_transit, 'wcore', purpose, veh_cat, period)
-    wexpress_share = get_value(df_walk_to_transit, 'wexpress', purpose, veh_cat, period)
-    wlrt_share = get_value(df_walk_to_transit, 'wlrt', purpose, veh_cat, period)
-    wcrt_share = get_value(df_walk_to_transit, 'wcrt', purpose, veh_cat, period)
-    wbrt_share = get_value(df_walk_to_transit, 'wbrt', purpose, veh_cat, period)
-
-    wcrt00_share = get_value(df_walk_to_transit, 'wcrt00', purpose, veh_cat, period)
-    wcrt01_share = get_value(df_walk_to_transit, 'wcrt01', purpose, veh_cat, period)
-    wcrt02_share = get_value(df_walk_to_transit, 'wcrt02', purpose, veh_cat, period)
-    wcrt03_share = get_value(df_walk_to_transit, 'wcrt03', purpose, veh_cat, period)
-    wcrt04_share = get_value(df_walk_to_transit, 'wcrt04', purpose, veh_cat, period)
-    wcrt05_share = get_value(df_walk_to_transit, 'wcrt05', purpose, veh_cat, period)
-    wcrt06_share = get_value(df_walk_to_transit, 'wcrt06', purpose, veh_cat, period)
-    wcrt07_share = get_value(df_walk_to_transit, 'wcrt07', purpose, veh_cat, period)
-    wcrt08_share = get_value(df_walk_to_transit, 'wcrt08', purpose, veh_cat, period)
-
-    # Get drive-to-transit service type shares
-    dlocal_share = get_value(df_drive_to_transit, 'dlocal', purpose, veh_cat, period)
-    dcore_share = get_value(df_drive_to_transit, 'dcore', purpose, veh_cat, period)
-    dexpress_share = get_value(df_drive_to_transit, 'dexpress', purpose, veh_cat, period)
-    dlrt_share = get_value(df_drive_to_transit, 'dlrt', purpose, veh_cat, period)
-    dcrt_share = get_value(df_drive_to_transit, 'dcrt', purpose, veh_cat, period)
-    dbrt_share = get_value(df_drive_to_transit, 'dbrt', purpose, veh_cat, period)
-
-    dcrt00_share = get_value(df_drive_to_transit, 'dcrt00', purpose, veh_cat, period)
-    dcrt01_share = get_value(df_drive_to_transit, 'dcrt01', purpose, veh_cat, period)
-    dcrt02_share = get_value(df_drive_to_transit, 'dcrt02', purpose, veh_cat, period)
-    dcrt03_share = get_value(df_drive_to_transit, 'dcrt03', purpose, veh_cat, period)
-    dcrt04_share = get_value(df_drive_to_transit, 'dcrt04', purpose, veh_cat, period)
-    dcrt05_share = get_value(df_drive_to_transit, 'dcrt05', purpose, veh_cat, period)
-    dcrt06_share = get_value(df_drive_to_transit, 'dcrt06', purpose, veh_cat, period)
-    dcrt07_share = get_value(df_drive_to_transit, 'dcrt07', purpose, veh_cat, period)
-    dcrt08_share = get_value(df_drive_to_transit, 'dcrt08', purpose, veh_cat, period)
-
-    # Base value
+    # Base values
     total_value = 1.0
-
-    # Create rows in path format
-    rows = []
-
-    # Determine display period
     display_period = period if period else 'Daily'
 
-    # Non-motorized branch
+    rows = []
+
+    # ========================================================================
+    # NON-MOTORIZED BRANCH
+    # ========================================================================
     rows.append({
-        'purpose': purpose,
-        'period': display_period,
-        'veh_cat': veh_cat,
-        'level1': 'Non-motorized',
-        'level2': 'Walk',
-        'level3': None,
-        'level4': None,
+        'purpose': purpose, 'period': display_period, 'veh_cat': veh_cat,
+        'level1': 'Non-motorized', 'level2': 'Walk', 'level3': None, 'level4': None,
         'value': total_value * nonmotor_share * walk_share * 100
     })
 
     rows.append({
-        'purpose': purpose,
-        'period': display_period,
-        'veh_cat': veh_cat,
-        'level1': 'Non-motorized',
-        'level2': 'Bike',
-        'level3': None,
-        'level4': None,
+        'purpose': purpose, 'period': display_period, 'veh_cat': veh_cat,
+        'level1': 'Non-motorized', 'level2': 'Bike', 'level3': None, 'level4': None,
         'value': total_value * nonmotor_share * bike_share * 100
     })
 
-    # Motorized > Auto > Drive Alone
+    # ========================================================================
+    # MOTORIZED > AUTO BRANCH
+    # ========================================================================
     rows.append({
-        'purpose': purpose,
-        'period': display_period,
-        'veh_cat': veh_cat,
-        'level1': 'Motorized',
-        'level2': 'Auto',
-        'level3': 'Drive Alone',
-        'level4': None,
+        'purpose': purpose, 'period': display_period, 'veh_cat': veh_cat,
+        'level1': 'Motorized', 'level2': 'Auto', 'level3': 'Drive Alone', 'level4': None,
         'value': total_value * motor_share * auto_share * alone_share * 100
     })
 
-    # Motorized > Auto > Shared Ride > SR2
     rows.append({
-        'purpose': purpose,
-        'period': display_period,
-        'veh_cat': veh_cat,
-        'level1': 'Motorized',
-        'level2': 'Auto',
-        'level3': 'Shared Ride',
-        'level4': 'SR2 (2 people)',
+        'purpose': purpose, 'period': display_period, 'veh_cat': veh_cat,
+        'level1': 'Motorized', 'level2': 'Auto', 'level3': 'Shared Ride', 'level4': 'SR2 (2 people)',
         'value': total_value * motor_share * auto_share * shared_share * sr2_share * 100
     })
 
-    # Motorized > Auto > Shared Ride > SR3
     rows.append({
-        'purpose': purpose,
-        'period': display_period,
-        'veh_cat': veh_cat,
-        'level1': 'Motorized',
-        'level2': 'Auto',
-        'level3': 'Shared Ride',
-        'level4': 'SR3 (3+ people)',
+        'purpose': purpose, 'period': display_period, 'veh_cat': veh_cat,
+        'level1': 'Motorized', 'level2': 'Auto', 'level3': 'Shared Ride', 'level4': 'SR3 (3+ people)',
         'value': total_value * motor_share * auto_share * shared_share * sr3_share * 100
     })
 
-    # Motorized > Transit > Walk-to-Transit > Service Types
+    # ========================================================================
+    # MOTORIZED > TRANSIT > WALK-TO-TRANSIT
+    # ========================================================================
     walk_transit_base = total_value * motor_share * transit_share * walkacc_share * 100
 
-    rows.append({
-        'purpose': purpose,
-        'period': display_period,
-        'veh_cat': veh_cat,
-        'level1': 'Motorized',
-        'level2': 'Transit',
-        'level3': 'Walk-to-Transit',
-        'level4': 'Local Bus',
-        'value': walk_transit_base * wlocal_share
-    })
+    # Dynamically add all walk-to-transit service types
+    for service_code, service_var in walk_service_mapping.items():
+        service_share = get_value(df_walk_to_transit, service_var, purpose, veh_cat, period)
 
-    rows.append({
-        'purpose': purpose,
-        'period': display_period,
-        'veh_cat': veh_cat,
-        'level1': 'Motorized',
-        'level2': 'Transit',
-        'level3': 'Walk-to-Transit',
-        'level4': 'Core Bus',
-        'value': walk_transit_base * wcore_share
-    })
+        # Determine display name
+        if service_code == 'CRT':
+            display_name = 'CRT'
+        elif service_code.startswith('CRT_'):
+            display_name = service_code  # e.g., 'CRT_00', 'CRT_01'
+        else:
+            display_name = service_code  # e.g., 'Local Bus', 'LRT'
 
-    rows.append({
-        'purpose': purpose,
-        'period': display_period,
-        'veh_cat': veh_cat,
-        'level1': 'Motorized',
-        'level2': 'Transit',
-        'level3': 'Walk-to-Transit',
-        'level4': 'Express Bus',
-        'value': walk_transit_base * wexpress_share
-    })
+        rows.append({
+            'purpose': purpose, 'period': display_period, 'veh_cat': veh_cat,
+            'level1': 'Motorized', 'level2': 'Transit', 'level3': 'Walk-to-Transit', 'level4': display_name,
+            'value': walk_transit_base * service_share
+        })
 
-    rows.append({
-        'purpose': purpose,
-        'period': display_period,
-        'veh_cat': veh_cat,
-        'level1': 'Motorized',
-        'level2': 'Transit',
-        'level3': 'Walk-to-Transit',
-        'level4': 'LRT',
-        'value': walk_transit_base * wlrt_share
-    })
-
-    rows.append({
-        'purpose': purpose,
-        'period': display_period,
-        'veh_cat': veh_cat,
-        'level1': 'Motorized',
-        'level2': 'Transit',
-        'level3': 'Walk-to-Transit',
-        'level4': 'CRT',
-        'value': walk_transit_base * wcrt_share
-    })
-
-    rows.append({
-        'purpose': purpose,
-        'period': display_period,
-        'veh_cat': veh_cat,
-        'level1': 'Motorized',
-        'level2': 'Transit',
-        'level3': 'Walk-to-Transit',
-        'level4': 'BRT',
-        'value': walk_transit_base * wbrt_share
-    })
-
-    rows.append({
-        'purpose': purpose,
-        'period': display_period,
-        'veh_cat': veh_cat,
-        'level1': 'Motorized',
-        'level2': 'Transit',
-        'level3': 'Walk-to-Transit',
-        'level4': 'CRT_00',
-        'value': walk_transit_base * wcrt00_share
-    })
-
-    rows.append({
-        'purpose': purpose,
-        'period': display_period,
-        'veh_cat': veh_cat,
-        'level1': 'Motorized',
-        'level2': 'Transit',
-        'level3': 'Walk-to-Transit',
-        'level4': 'CRT_01',
-        'value': walk_transit_base * wcrt01_share
-    })
-
-    rows.append({
-        'purpose': purpose,
-        'period': display_period,
-        'veh_cat': veh_cat,
-        'level1': 'Motorized',
-        'level2': 'Transit',
-        'level3': 'Walk-to-Transit',
-        'level4': 'CRT_02',
-        'value': walk_transit_base * wcrt02_share
-    })
-
-    rows.append({
-        'purpose': purpose,
-        'period': display_period,
-        'veh_cat': veh_cat,
-        'level1': 'Motorized',
-        'level2': 'Transit',
-        'level3': 'Walk-to-Transit',
-        'level4': 'CRT_03',
-        'value': walk_transit_base * wcrt03_share
-    })
-
-    rows.append({
-        'purpose': purpose,
-        'period': display_period,
-        'veh_cat': veh_cat,
-        'level1': 'Motorized',
-        'level2': 'Transit',
-        'level3': 'Walk-to-Transit',
-        'level4': 'CRT_04',
-        'value': walk_transit_base * wcrt04_share
-    })
-
-    rows.append({
-        'purpose': purpose,
-        'period': display_period,
-        'veh_cat': veh_cat,
-        'level1': 'Motorized',
-        'level2': 'Transit',
-        'level3': 'Walk-to-Transit',
-        'level4': 'CRT_05',
-        'value': walk_transit_base * wcrt05_share
-    })
-
-    rows.append({
-        'purpose': purpose,
-        'period': display_period,
-        'veh_cat': veh_cat,
-        'level1': 'Motorized',
-        'level2': 'Transit',
-        'level3': 'Walk-to-Transit',
-        'level4': 'CRT_06',
-        'value': walk_transit_base * wcrt06_share
-    })
-
-    rows.append({
-        'purpose': purpose,
-        'period': display_period,
-        'veh_cat': veh_cat,
-        'level1': 'Motorized',
-        'level2': 'Transit',
-        'level3': 'Walk-to-Transit',
-        'level4': 'CRT_07',
-        'value': walk_transit_base * wcrt07_share
-    })
-
-    rows.append({
-        'purpose': purpose,
-        'period': display_period,
-        'veh_cat': veh_cat,
-        'level1': 'Motorized',
-        'level2': 'Transit',
-        'level3': 'Walk-to-Transit',
-        'level4': 'CRT_08',
-        'value': walk_transit_base * wcrt08_share
-    })
-
-    # Motorized > Transit > Drive-to-Transit > Service Types
+    # ========================================================================
+    # MOTORIZED > TRANSIT > DRIVE-TO-TRANSIT
+    # ========================================================================
     drive_transit_base = total_value * motor_share * transit_share * driveacc_share * 100
 
-    rows.append({
-        'purpose': purpose,
-        'period': display_period,
-        'veh_cat': veh_cat,
-        'level1': 'Motorized',
-        'level2': 'Transit',
-        'level3': 'Drive-to-Transit',
-        'level4': 'Local Bus',
-        'value': drive_transit_base * dlocal_share
-    })
+    # Dynamically add all drive-to-transit service types
+    for service_code, service_var in drive_service_mapping.items():
+        service_share = get_value(df_drive_to_transit, service_var, purpose, veh_cat, period)
 
-    rows.append({
-        'purpose': purpose,
-        'period': display_period,
-        'veh_cat': veh_cat,
-        'level1': 'Motorized',
-        'level2': 'Transit',
-        'level3': 'Drive-to-Transit',
-        'level4': 'Core Bus',
-        'value': drive_transit_base * dcore_share
-    })
+        # Determine display name
+        if service_code == 'CRT':
+            display_name = 'CRT'
+        elif service_code.startswith('CRT_'):
+            display_name = service_code
+        else:
+            display_name = service_code
 
-    rows.append({
-        'purpose': purpose,
-        'period': display_period,
-        'veh_cat': veh_cat,
-        'level1': 'Motorized',
-        'level2': 'Transit',
-        'level3': 'Drive-to-Transit',
-        'level4': 'Express Bus',
-        'value': drive_transit_base * dexpress_share
-    })
+        rows.append({
+            'purpose': purpose, 'period': display_period, 'veh_cat': veh_cat,
+            'level1': 'Motorized', 'level2': 'Transit', 'level3': 'Drive-to-Transit', 'level4': display_name,
+            'value': drive_transit_base * service_share
+        })
 
-    rows.append({
-        'purpose': purpose,
-        'period': display_period,
-        'veh_cat': veh_cat,
-        'level1': 'Motorized',
-        'level2': 'Transit',
-        'level3': 'Drive-to-Transit',
-        'level4': 'LRT',
-        'value': drive_transit_base * dlrt_share
-    })
-
-    rows.append({
-        'purpose': purpose,
-        'period': display_period,
-        'veh_cat': veh_cat,
-        'level1': 'Motorized',
-        'level2': 'Transit',
-        'level3': 'Drive-to-Transit',
-        'level4': 'CRT',
-        'value': drive_transit_base * dcrt_share
-    })
-
-    rows.append({
-        'purpose': purpose,
-        'period': display_period,
-        'veh_cat': veh_cat,
-        'level1': 'Motorized',
-        'level2': 'Transit',
-        'level3': 'Drive-to-Transit',
-        'level4': 'BRT',
-        'value': drive_transit_base * dbrt_share
-    })
-
-    rows.append({
-        'purpose': purpose,
-        'period': display_period,
-        'veh_cat': veh_cat,
-        'level1': 'Motorized',
-        'level2': 'Transit',
-        'level3': 'Drive-to-Transit',
-        'level4': 'CRT_00',
-        'value': drive_transit_base * dcrt00_share
-    })
-
-    rows.append({
-        'purpose': purpose,
-        'period': display_period,
-        'veh_cat': veh_cat,
-        'level1': 'Motorized',
-        'level2': 'Transit',
-        'level3': 'Drive-to-Transit',
-        'level4': 'CRT_01',
-        'value': drive_transit_base * dcrt01_share
-    })
-
-    rows.append({
-        'purpose': purpose,
-        'period': display_period,
-        'veh_cat': veh_cat,
-        'level1': 'Motorized',
-        'level2': 'Transit',
-        'level3': 'Drive-to-Transit',
-        'level4': 'CRT_02',
-        'value': drive_transit_base * dcrt02_share
-    })
-
-    rows.append({
-        'purpose': purpose,
-        'period': display_period,
-        'veh_cat': veh_cat,
-        'level1': 'Motorized',
-        'level2': 'Transit',
-        'level3': 'Drive-to-Transit',
-        'level4': 'CRT_03',
-        'value': drive_transit_base * dcrt03_share
-    })
-
-    rows.append({
-        'purpose': purpose,
-        'period': display_period,
-        'veh_cat': veh_cat,
-        'level1': 'Motorized',
-        'level2': 'Transit',
-        'level3': 'Drive-to-Transit',
-        'level4': 'CRT_04',
-        'value': drive_transit_base * dcrt04_share
-    })
-
-    rows.append({
-        'purpose': purpose,
-        'period': display_period,
-        'veh_cat': veh_cat,
-        'level1': 'Motorized',
-        'level2': 'Transit',
-        'level3': 'Drive-to-Transit',
-        'level4': 'CRT_05',
-        'value': drive_transit_base * dcrt05_share
-    })
-
-    rows.append({
-        'purpose': purpose,
-        'period': display_period,
-        'veh_cat': veh_cat,
-        'level1': 'Motorized',
-        'level2': 'Transit',
-        'level3': 'Drive-to-Transit',
-        'level4': 'CRT_06',
-        'value': drive_transit_base * dcrt06_share
-    })
-
-    rows.append({
-        'purpose': purpose,
-        'period': display_period,
-        'veh_cat': veh_cat,
-        'level1': 'Motorized',
-        'level2': 'Transit',
-        'level3': 'Drive-to-Transit',
-        'level4': 'CRT_07',
-        'value': drive_transit_base * dcrt07_share
-    })
-
-    rows.append({
-        'purpose': purpose,
-        'period': display_period,
-        'veh_cat': veh_cat,
-        'level1': 'Motorized',
-        'level2': 'Transit',
-        'level3': 'Drive-to-Transit',
-        'level4': 'CRT_08',
-        'value': drive_transit_base * dcrt08_share
-    })
-
-    df_tree = pd.DataFrame(rows)
-    return df_tree
+    return pd.DataFrame(rows)
 
 
 # Create comprehensive dataframe with all combinations
