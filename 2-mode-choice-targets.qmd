@@ -31,6 +31,7 @@ import seaborn as sns
 
 import importlib.util
 from pathlib import Path
+import json
 import sys
 import os
 import requests
@@ -42,7 +43,25 @@ load_dotenv()
 
 ## Environment Variables
 
+```{python}
+# Export mode control
+EXPORT_MODE = "only_needed"  # Options: "export_all", "comment_unused", "only_needed"
 
+# Optional suffix removal (when no vehicle disaggregation exists in entire file)
+REMOVE_ALL_SUFFIX = True
+```
+
+```{python}
+# Variable-level vehicle ownership patterns
+# Format: {purpose: {period: {variable_family: [list of suffixes needed]}}}
+# Suffixes: '0veh', '1veh', '2veh', '3veh' for disaggregation, 'all' for aggregated
+
+# Load vehicle-level vehicle ownership patterns from JSON configuration file
+config_file = 'vehicle_pattern_config.json'
+
+with open(config_file, 'r') as f:
+        variable_veh_patterns = json.load(f)
+```
 
 ## Helper Functions
 
@@ -913,12 +932,12 @@ print("=" * 60)
 
 # Base service mapping
 service_mapping = {
-    'LCL': 'local',
-    'COR': 'core',
-    'EXP': 'express',
-    'LRT': 'lrt',
-    'CRT': 'crt',
-    'BRT': 'brt'
+    'LCL': 'LCL',
+    'COR': 'COR',
+    'EXP': 'EXP',
+    'LRT': 'LRT',
+    'CRT': 'CRT',
+    'BRT': 'BRT'
 }
 
 # 6. Transit by Service Type
@@ -979,18 +998,13 @@ print("=" * 60)
 
 # Base walk-to-transit mapping
 walk_service_mapping = {
-    'LCL': 'wlocal',
-    'COR': 'wcore',
-    'EXP': 'wexpress',
-    'LRT': 'wlrt',
-    'CRT': 'wcrt',
-    'BRT': 'wbrt'
+    'LCL': 'wLCL',
+    'COR': 'wCOR',
+    'EXP': 'wEXP',
+    'LRT': 'wLRT',
+    'CRT': 'wCRT',
+    'BRT': 'wBRT'
 }
-
-# Auto-generate CRT mappings
-for crt_cat in crt_categories:
-    suffix = '' if crt_cat == 'CRT' else crt_cat.split('_')[1].lower()
-    walk_service_mapping[crt_cat] = f'wcrt{suffix}'
 
 # 8. Walk-to-Transit by Service Type
 df_walk_to_transit = calculate_categorical_shares(
@@ -1021,12 +1035,12 @@ print("=" * 60)
 
 # Base drive-to-transit mapping
 drive_service_mapping = {
-    'LCL': 'dlocal',
-    'COR': 'dcore',
-    'EXP': 'dexpress',
-    'LRT': 'dlrt',
-    'CRT': 'dcrt',
-    'BRT': 'dbrt',
+    'LCL': 'dLCL',
+    'COR': 'dCOR',
+    'EXP': 'dEXP',
+    'LRT': 'dLRT',
+    'CRT': 'dCRT',
+    'BRT': 'dBRT',
 }
 
 # 9. Drive-to-Transit by Service Type
@@ -1052,9 +1066,10 @@ verify_shares(df_drive_to_transit)
 ## Define Expansion Function
 
 ```{python}
-def expand_crt_categories(df_shares, crt_purpose_props, crt_var_prefix='crt'):
+def expand_crt_categories(df_shares, crt_purpose_props, crt_var_prefix='CRT'):
     """
     Expand single CRT category into detailed CRT subclasses.
+    Uses the prefix directly as provided (CRT, wCRT, dCRT).
 
     Parameters:
     -----------
@@ -1063,7 +1078,7 @@ def expand_crt_categories(df_shares, crt_purpose_props, crt_var_prefix='crt'):
     crt_purpose_props : dict
         Dictionary mapping Purpose -> {class_CRT: proportion}
     crt_var_prefix : str
-        Prefix for CRT variable (e.g., 'crt', 'wcrt', 'dcrt')
+        Prefix for CRT variable (e.g., 'CRT', 'wCRT', 'dCRT')
 
     Returns:
     --------
@@ -1071,7 +1086,7 @@ def expand_crt_categories(df_shares, crt_purpose_props, crt_var_prefix='crt'):
     """
     df_expanded = df_shares.copy()
 
-    # Find all CRT rows (e.g., calib_share_crt_all, calib_share_wcrt_2veh)
+    # Find all CRT rows (e.g., calib_share_CRT_all, calib_share_wCRT_2veh)
     crt_pattern = f'calib_share_{crt_var_prefix}_'
     crt_rows = df_expanded.index[df_expanded.index.str.contains(crt_pattern)].tolist()
 
@@ -1083,8 +1098,8 @@ def expand_crt_categories(df_shares, crt_purpose_props, crt_var_prefix='crt'):
 
     for crt_row in crt_rows:
         # Extract vehicle category from variable name
-        # e.g., "calib_share_crt_all" -> "all"
-        # e.g., "calib_share_wcrt_2veh" -> "2veh"
+        # e.g., "calib_share_CRT_all" -> "all"
+        # e.g., "calib_share_wCRT_2veh" -> "2veh"
         veh_cat = crt_row.split('_')[-1]
 
         # Get CRT share for each purpose/period combination
@@ -1100,8 +1115,14 @@ def expand_crt_categories(df_shares, crt_purpose_props, crt_var_prefix='crt'):
             # Expand into CRT subclasses
             for crt_class, crt_prop in crt_purpose_props[purpose].items():
                 # Create variable name for this CRT subclass
-                # e.g., "calib_share_crt00_all", "calib_share_wcrt01_2veh"
-                crt_suffix = crt_class.lower().replace('_', '')  # CRT_00 -> crt00
+                # CRT_00 -> CRT00, CRT_01 -> CRT01, etc.
+                crt_suffix = crt_class.replace('_', '')  # CRT_00 -> CRT00
+
+                # Build variable name: calib_share_{prefix}{suffix}_{veh_cat}
+                # Examples:
+                #   prefix='CRT'  -> calib_share_CRT00_all
+                #   prefix='wCRT' -> calib_share_wCRT00_all
+                #   prefix='dCRT' -> calib_share_dCRT00_all
                 new_var_name = f"calib_share_{crt_var_prefix}{crt_suffix[3:]}_{veh_cat}"
 
                 # Calculate expanded share
@@ -1123,7 +1144,7 @@ def expand_crt_categories(df_shares, crt_purpose_props, crt_var_prefix='crt'):
         df_new_rows = pd.DataFrame.from_dict(new_rows_dict, orient='index')
         df_result = pd.concat([df_result, df_new_rows], axis=0)
 
-        # Sort index (now all indices should be strings)
+        # Sort index
         return df_result.sort_index()
 
     return df_expanded
@@ -1139,7 +1160,7 @@ print("\nExpanding CRT in Transit by Service...")
 df_transit_by_service_expanded = expand_crt_categories(
     df_transit_by_service,
     crt_purpose_props,
-    crt_var_prefix='crt'
+    crt_var_prefix='CRT'
 )
 print(f"  Original shape: {df_transit_by_service.shape}")
 print(f"  Expanded shape: {df_transit_by_service_expanded.shape}")
@@ -1160,7 +1181,7 @@ print("\nExpanding CRT in Walk-to-Transit...")
 df_walk_to_transit_expanded = expand_crt_categories(
     df_walk_to_transit,
     crt_purpose_props,
-    crt_var_prefix='wcrt'
+    crt_var_prefix='wCRT'
 )
 print(f"  Original shape: {df_walk_to_transit.shape}")
 print(f"  Expanded shape: {df_walk_to_transit_expanded.shape}")
@@ -1181,7 +1202,7 @@ print("\nExpanding CRT in Drive-to-Transit...")
 df_drive_to_transit_expanded = expand_crt_categories(
     df_drive_to_transit,
     crt_purpose_props,
-    crt_var_prefix='dcrt'
+    crt_var_prefix='dCRT'
 )
 print(f"  Original shape: {df_drive_to_transit.shape}")
 print(f"  Expanded shape: {df_drive_to_transit_expanded.shape}")
@@ -1679,7 +1700,7 @@ def extract_values(df, purpose, period, pattern, include_veh_categories=True):
 ### Export Function
 
 ```{python}
-def export_calib_file(purpose, period, include_veh_categories=True):
+def export_calib_file(purpose, period, export_mode="only_needed", remove_all_suffix=False):
     """
     Export calibration target file for a given purpose and period.
 
@@ -1689,9 +1710,10 @@ def export_calib_file(purpose, period, include_veh_categories=True):
         Trip purpose (HBW, HBO, NHB, HBC, HBSch)
     period : str
         Time period (PK, OK, Daily)
-    include_veh_categories : bool
-        If True, include vehicle category breakdowns (_0veh, _1veh, etc.)
-        If False, only use aggregate values without vehicle suffix
+    export_mode : str
+        Export mode: "export_all", "comment_unused", "only_needed"
+    remove_all_suffix : bool
+        Remove _all suffix when no vehicle disaggregation exists in entire file
     """
 
     # Determine file period (Daily becomes 'pk' for HBC/HBSch)
@@ -1699,36 +1721,140 @@ def export_calib_file(purpose, period, include_veh_categories=True):
 
     # Determine display period for header
     display_period = file_period.capitalize()
-    # display_period = 'Pk' if period == 'PK' or period == 'Daily' else 'Ok'
 
     filename = f"calib_target_{purpose.lower()}_{file_period}.txt"
     filepath = os.path.join(output_dir, filename)
 
-    print(f"\nCreating {filename}... (Vehicle categories: {'Yes' if include_veh_categories else 'No'})")
+    print(f"\nCreating {filename}... (Mode: {export_mode})")
+
+    # Get pattern configuration for this purpose/period
+    patterns = variable_veh_patterns.get(purpose, {}).get(period, {})
+
+    # Check if entire file has only 'all' suffix (for suffix removal)
+    file_has_only_all = all(
+        'all' in patterns.get(var, ['all']) and len(patterns.get(var, ['all'])) == 1
+        for var in patterns.keys()
+    )
+    apply_suffix_removal = remove_all_suffix and file_has_only_all
+
+    # Helper function to get variable name based on settings
+    def get_var_name(base_name, veh_cat):
+        var_name = f"{base_name}_{veh_cat}"
+        if apply_suffix_removal and veh_cat == 'all':
+            var_name = base_name
+        return var_name
+
+    # Helper function to determine if a variable should be included/commented
+    def should_include(var_family, veh_cat):
+        """
+        Returns tuple: (include, comment)
+        - include: whether to write the line
+        - comment: whether to prefix with ';'
+        """
+        # Mode 1: Export everything, no comments
+        if export_mode == "export_all":
+            # Exclude 3veh in mode 1 would be incorrect based on user request
+            # User said keep 3veh for mode 1
+            return (True, False)
+
+        # Get pattern for this variable family
+        pattern = patterns.get(var_family, ['all'])
+
+        # For modes 2 and 3, exclude 3veh (it's the base category)
+        if veh_cat == '3veh':
+            if export_mode == "only_needed":
+                return (False, False)  # Don't include at all
+            elif export_mode == "comment_unused":
+                return (True, True)  # Include but comment out
+
+        # Mode 2: Export all, comment unused
+        if export_mode == "comment_unused":
+            if veh_cat in pattern:
+                return (True, False)  # Include, no comment
+            else:
+                return (True, True)   # Include, but commented
+
+        # Mode 3: Only needed
+        if export_mode == "only_needed":
+            if veh_cat in pattern:
+                return (True, False)  # Include
+            else:
+                return (False, False) # Don't include
+
+        return (False, False)
+
+    # Helper function to extract and format values
+    def extract_and_write(f, df, var_pattern, var_families, section_comment, sub_comment=None):
+        """
+        Extract values and write to file with proper formatting
+
+        Parameters:
+        -----------
+        f : file handle
+        df : DataFrame with values
+        var_pattern : str - pattern to match in index
+        var_families : list - list of variable family names (e.g., ['bike', 'walk'])
+        section_comment : str - main section comment
+        sub_comment : str - optional sub-section comment
+        """
+        f.write(f"{section_comment}\t\t\n")
+        if sub_comment:
+            f.write(f"  {sub_comment}\t\t\n")
+
+        has_output = False
+
+        for var_family in var_families:
+            # Try all vehicle categories
+            for veh_cat in ['0veh', '1veh', '2veh', '3veh', 'all']:
+                include, comment = should_include(var_family, veh_cat)
+
+                if not include:
+                    continue
+
+                # Construct the full variable name in the dataframe
+                df_var_name = f"calib_share_{var_family}_{veh_cat}"
+
+                # Check if variable exists in dataframe
+                if df_var_name not in df.index:
+                    continue
+
+                # Check if column exists
+                if (purpose, period) not in df.columns:
+                    continue
+
+                value = df.loc[df_var_name, (purpose, period)]
+
+                # Get output variable name (with potential suffix removal)
+                output_var_name = get_var_name(f"calib_share_{var_family}", veh_cat)
+
+                # Write the line
+                comment_prefix = ";" if comment else " "
+                f.write(f"{comment_prefix} {output_var_name:<30}\t=\t{value:.4f}\n")
+                has_output = True
+
+        if has_output:
+            f.write("\t\t\n")
+        f.write("\t\t\n")
 
     with open(filepath, 'w') as f:
         # Write header
         f.write(f";Calibration target values - {purpose} {display_period}\t\t\n")
         f.write("\t\t\n")
 
-        # Write disclaimer
-        f.write(f";Note: Not all of the variables listed below are used directly in the Mode Choice model. Some are included solely for verification and cross-checking purposes.\t\t\n")
-        f.write("\t\t\n")
+        # Write disclaimer - only for export_all and comment_unused modes
+        if export_mode in ["export_all", "comment_unused"]:
+            f.write(f";Note: Not all of the variables listed below are used directly in the Mode Choice model. Some are included solely for verification and cross-checking purposes.\t\t\n")
+            f.write("\t\t\n")
 
         # =====================================================================
         # SECTION 1: Motorized vs Non-motorized (within total trips)
         # =====================================================================
-        f.write(";relative within total trips\t\t\n")
-
-        # Non-motorized shares only
-        nonmotorized = extract_values(df_alltrips_cat, purpose, period, 'nonmotor_', include_veh_categories)
-        if nonmotorized:
-            f.write("  ;nonmotorized shares \t\t\n")
-            for var, val in sorted(nonmotorized.items()):
-                f.write(f"  {var:<30}\t=\t{val:.4f}\n")
-
-        f.write("\t\t\n")
-        f.write("\t\t\n")
+        extract_and_write(
+            f, df_alltrips_cat, 'nonmotor_',
+            ['nonmotor'],
+            ";relative within total trips",
+            ";nonmotorized shares "
+        )
 
         # =====================================================================
         # SECTION 2: Walk vs Bike (within nonmotorized)
@@ -1736,19 +1862,32 @@ def export_calib_file(purpose, period, include_veh_categories=True):
         f.write(";relative within nonmotorized\t\t\n")
 
         # Walk shares
-        walk = extract_values(df_nonmotorized_cat, purpose, period, 'walk_', include_veh_categories)
-        if walk:
-            f.write("  ;walk shares \t\t\n")
-            for var, val in sorted(walk.items()):
-                f.write(f"  {var:<30}\t=\t{val:.4f}\n")
-            f.write("\t\t\n")
+        for veh_cat in ['0veh', '1veh', '2veh', '3veh', 'all']:
+            include, comment = should_include('walk', veh_cat)
+            if include:
+                df_var_name = f"calib_share_walk_{veh_cat}"
+                if df_var_name in df_nonmotorized_cat.index and (purpose, period) in df_nonmotorized_cat.columns:
+                    value = df_nonmotorized_cat.loc[df_var_name, (purpose, period)]
+                    output_var_name = get_var_name("calib_share_walk", veh_cat)
+                    comment_prefix = ";" if comment else " "
+                    if not comment:
+                        f.write("  ;walk shares \t\t\n")
+                    f.write(f"{comment_prefix} {output_var_name:<30}\t=\t{value:.4f}\n")
+                    if not comment:
+                        f.write("\t\t\n")
 
         # Bike shares
-        bike = extract_values(df_nonmotorized_cat, purpose, period, 'bike_', include_veh_categories)
-        if bike:
-            f.write("  ;bike shares \t\t\n")
-            for var, val in sorted(bike.items()):
-                f.write(f"  {var:<30}\t=\t{val:.4f}\n")
+        for veh_cat in ['0veh', '1veh', '2veh', '3veh', 'all']:
+            include, comment = should_include('bike', veh_cat)
+            if include:
+                df_var_name = f"calib_share_bike_{veh_cat}"
+                if df_var_name in df_nonmotorized_cat.index and (purpose, period) in df_nonmotorized_cat.columns:
+                    value = df_nonmotorized_cat.loc[df_var_name, (purpose, period)]
+                    output_var_name = get_var_name("calib_share_bike", veh_cat)
+                    comment_prefix = ";" if comment else " "
+                    if not comment:
+                        f.write("  ;bike shares \t\t\n")
+                    f.write(f"{comment_prefix} {output_var_name:<30}\t=\t{value:.4f}\n")
 
         f.write("\t\t\n")
         f.write("\t\t\n")
@@ -1758,20 +1897,33 @@ def export_calib_file(purpose, period, include_veh_categories=True):
         # =====================================================================
         f.write(";relative within auto\t\t\n")
 
-        # Drive alone shares
-        alone = extract_values(df_auto_riders, purpose, period, 'alone_', include_veh_categories)
-        if alone:
-            f.write("  ;drive alone shares \t\t\n")
-            for var, val in sorted(alone.items()):
-                f.write(f"  {var:<30}\t=\t{val:.4f}\n")
-            f.write("\t\t\n")
+        # Alone shares
+        for veh_cat in ['0veh', '1veh', '2veh', '3veh', 'all']:
+            include, comment = should_include('alone', veh_cat)
+            if include:
+                df_var_name = f"calib_share_alone_{veh_cat}"
+                if df_var_name in df_auto_riders.index and (purpose, period) in df_auto_riders.columns:
+                    value = df_auto_riders.loc[df_var_name, (purpose, period)]
+                    output_var_name = get_var_name("calib_share_alone", veh_cat)
+                    comment_prefix = ";" if comment else " "
+                    if not comment:
+                        f.write("  ;drive alone shares \t\t\n")
+                    f.write(f"{comment_prefix} {output_var_name:<30}\t=\t{value:.4f}\n")
+                    if not comment:
+                        f.write("\t\t\n")
 
-        # Shared ride shares
-        shared = extract_values(df_auto_riders, purpose, period, 'shared_', include_veh_categories)
-        if shared:
-            f.write("  ;shared ride shares \t\t\n")
-            for var, val in sorted(shared.items()):
-                f.write(f"  {var:<30}\t=\t{val:.4f}\n")
+        # Shared shares
+        for veh_cat in ['0veh', '1veh', '2veh', '3veh', 'all']:
+            include, comment = should_include('shared', veh_cat)
+            if include:
+                df_var_name = f"calib_share_shared_{veh_cat}"
+                if df_var_name in df_auto_riders.index and (purpose, period) in df_auto_riders.columns:
+                    value = df_auto_riders.loc[df_var_name, (purpose, period)]
+                    output_var_name = get_var_name("calib_share_shared", veh_cat)
+                    comment_prefix = ";" if comment else " "
+                    if not comment:
+                        f.write("  ;shared ride shares \t\t\n")
+                    f.write(f"{comment_prefix} {output_var_name:<30}\t=\t{value:.4f}\n")
 
         f.write("\t\t\n")
         f.write("\t\t\n")
@@ -1782,19 +1934,32 @@ def export_calib_file(purpose, period, include_veh_categories=True):
         f.write(";relative within shared ride\t\t\n")
 
         # SR2 shares
-        sr2 = extract_values(df_shared_by_person, purpose, period, 'sr2_', include_veh_categories)
-        if sr2:
-            f.write("  ;sr2 shares \t\t\n")
-            for var, val in sorted(sr2.items()):
-                f.write(f"  {var:<30}\t=\t{val:.4f}\n")
-            f.write("\t\t\n")
+        for veh_cat in ['0veh', '1veh', '2veh', '3veh', 'all']:
+            include, comment = should_include('sr2', veh_cat)
+            if include:
+                df_var_name = f"calib_share_sr2_{veh_cat}"
+                if df_var_name in df_shared_by_person.index and (purpose, period) in df_shared_by_person.columns:
+                    value = df_shared_by_person.loc[df_var_name, (purpose, period)]
+                    output_var_name = get_var_name("calib_share_sr2", veh_cat)
+                    comment_prefix = ";" if comment else " "
+                    if not comment:
+                        f.write("  ;sr2 shares \t\t\n")
+                    f.write(f"{comment_prefix} {output_var_name:<30}\t=\t{value:.4f}\n")
+                    if not comment:
+                        f.write("\t\t\n")
 
         # SR3 shares
-        sr3 = extract_values(df_shared_by_person, purpose, period, 'sr3_', include_veh_categories)
-        if sr3:
-            f.write("  ;sr3 shares \t\t\n")
-            for var, val in sorted(sr3.items()):
-                f.write(f"  {var:<30}\t=\t{val:.4f}\n")
+        for veh_cat in ['0veh', '1veh', '2veh', '3veh', 'all']:
+            include, comment = should_include('sr3', veh_cat)
+            if include:
+                df_var_name = f"calib_share_sr3_{veh_cat}"
+                if df_var_name in df_shared_by_person.index and (purpose, period) in df_shared_by_person.columns:
+                    value = df_shared_by_person.loc[df_var_name, (purpose, period)]
+                    output_var_name = get_var_name("calib_share_sr3", veh_cat)
+                    comment_prefix = ";" if comment else " "
+                    if not comment:
+                        f.write("  ;sr3 shares \t\t\n")
+                    f.write(f"{comment_prefix} {output_var_name:<30}\t=\t{value:.4f}\n")
 
         f.write("\t\t\n")
         f.write("\t\t\n")
@@ -1805,41 +1970,62 @@ def export_calib_file(purpose, period, include_veh_categories=True):
         f.write(";relative within motorized\t\t\n")
 
         # Auto shares
-        auto = extract_values(df_motorized_cat, purpose, period, 'auto_', include_veh_categories)
-        if auto:
-            f.write("  ;auto shares \t\t\n")
-            for var, val in sorted(auto.items()):
-                f.write(f"  {var:<30}\t=\t{val:.4f}\n")
-            f.write("\t\t\n")
+        for veh_cat in ['0veh', '1veh', '2veh', '3veh', 'all']:
+            include, comment = should_include('auto', veh_cat)
+            if include:
+                df_var_name = f"calib_share_auto_{veh_cat}"
+                if df_var_name in df_motorized_cat.index and (purpose, period) in df_motorized_cat.columns:
+                    value = df_motorized_cat.loc[df_var_name, (purpose, period)]
+                    output_var_name = get_var_name("calib_share_auto", veh_cat)
+                    comment_prefix = ";" if comment else " "
+                    if not comment:
+                        f.write("  ;auto shares \t\t\n")
+                    f.write(f"{comment_prefix} {output_var_name:<30}\t=\t{value:.4f}\n")
+                    if not comment:
+                        f.write("\t\t\n")
 
         # Transit shares
-        transit = extract_values(df_motorized_cat, purpose, period, 'transit_', include_veh_categories)
-        if transit:
-            f.write("  ;transit shares \t\t\n")
-            for var, val in sorted(transit.items()):
-                f.write(f"  {var:<30}\t=\t{val:.4f}\n")
-            f.write(" \t\t\n")
+        for veh_cat in ['0veh', '1veh', '2veh', '3veh', 'all']:
+            include, comment = should_include('transit', veh_cat)
+            if include:
+                df_var_name = f"calib_share_transit_{veh_cat}"
+                if df_var_name in df_motorized_cat.index and (purpose, period) in df_motorized_cat.columns:
+                    value = df_motorized_cat.loc[df_var_name, (purpose, period)]
+                    output_var_name = get_var_name("calib_share_transit", veh_cat)
+                    comment_prefix = ";" if comment else " "
+                    if not comment:
+                        f.write("  ;transit shares \t\t\n")
+                    f.write(f"{comment_prefix} {output_var_name:<30}\t=\t{value:.4f}\n")
+                    if not comment:
+                        f.write(" \t\t\n")
 
         f.write("\t\t\n")
 
         # =====================================================================
         # SECTION 6: Transit by Service Type (within transit)
-        # NOTE: This section now includes expanded CRT subclasses (crt00, crt01, etc.)
+        # Now includes expanded CRT subclasses (CRT00, CRT01, etc.)
         # =====================================================================
         f.write(";relative within transit\t\t\n")
 
-        # Get all transit service types
-        service_types = service_mapping.values()
-        transit_services = {}
+        # Service types including expanded CRT
+        service_types = ['COR', 'BRT', 'LRT', 'EXP'] + [f'CRT{i:02d}' for i in range(9)]
+
         for service in service_types:
-            vals = extract_values(df_transit_by_service, purpose, period, f'{service}_', include_veh_categories)
-            transit_services.update(vals)
+            for veh_cat in ['0veh', '1veh', '2veh', '3veh', 'all']:
+                include, comment = should_include(service, veh_cat)
+                if include:
+                    df_var_name = f"calib_share_{service.lower()}_{veh_cat}"
+                    # Check with uppercase service name as well
+                    if df_var_name not in df_transit_by_service.index:
+                        df_var_name = f"calib_share_{service}_{veh_cat}"
 
-        if transit_services:
-            for var, val in sorted(transit_services.items()):
-                f.write(f"  {var:<30}\t=\t{val:.4f}\n")
-            f.write("  \t\t\n")
+                    if df_var_name in df_transit_by_service.index and (purpose, period) in df_transit_by_service.columns:
+                        value = df_transit_by_service.loc[df_var_name, (purpose, period)]
+                        output_var_name = get_var_name(f"calib_share_{service}", veh_cat)
+                        comment_prefix = ";" if comment else " "
+                        f.write(f"{comment_prefix} {output_var_name:<30}\t=\t{value:.4f}\n")
 
+        f.write("  \t\t\n")
         f.write("\t\t\n")
 
         # =====================================================================
@@ -1848,57 +2034,86 @@ def export_calib_file(purpose, period, include_veh_categories=True):
         f.write(";relative within transit\t\t\n")
 
         # Walk access shares
-        walkacc = extract_values(df_transit_by_access, purpose, period, 'walkacc_', include_veh_categories)
-        if walkacc:
-            f.write("  ;walk-to-transit shares \t\t\n")
-            for var, val in sorted(walkacc.items()):
-                f.write(f"  {var:<30}\t=\t{val:.4f}\n")
-            f.write("\t\t\n")
+        for veh_cat in ['0veh', '1veh', '2veh', '3veh', 'all']:
+            include, comment = should_include('walkacc', veh_cat)
+            if include:
+                df_var_name = f"calib_share_walkacc_{veh_cat}"
+                if df_var_name in df_transit_by_access.index and (purpose, period) in df_transit_by_access.columns:
+                    value = df_transit_by_access.loc[df_var_name, (purpose, period)]
+                    output_var_name = get_var_name("calib_share_walkacc", veh_cat)
+                    comment_prefix = ";" if comment else " "
+                    if not comment:
+                        f.write("  ;walk-to-transit shares \t\t\n")
+                    f.write(f"{comment_prefix} {output_var_name:<30}\t=\t{value:.4f}\n")
+                    if not comment:
+                        f.write("\t\t\n")
 
         # Drive access shares
-        driveacc = extract_values(df_transit_by_access, purpose, period, 'driveacc_', include_veh_categories)
-        if driveacc:
-            f.write("  ;drive-to-transit shares \t\t\n")
-            for var, val in sorted(driveacc.items()):
-                f.write(f"  {var:<30}\t=\t{val:.4f}\n")
+        for veh_cat in ['0veh', '1veh', '2veh', '3veh', 'all']:
+            include, comment = should_include('driveacc', veh_cat)
+            if include:
+                df_var_name = f"calib_share_driveacc_{veh_cat}"
+                if df_var_name in df_transit_by_access.index and (purpose, period) in df_transit_by_access.columns:
+                    value = df_transit_by_access.loc[df_var_name, (purpose, period)]
+                    output_var_name = get_var_name("calib_share_driveacc", veh_cat)
+                    comment_prefix = ";" if comment else " "
+                    if not comment:
+                        f.write("  ;drive-to-transit shares \t\t\n")
+                    f.write(f"{comment_prefix} {output_var_name:<30}\t=\t{value:.4f}\n")
 
         f.write("\t\t\n")
         f.write("\t\t\n")
 
         # =====================================================================
         # SECTION 8: Walk-to-Transit by Service (within walkacc)
-        # NOTE: This section now includes expanded CRT subclasses (wcrt00, wcrt01, etc.)
+        # Now includes expanded CRT subclasses (wCRT00, wCRT01, etc.)
         # =====================================================================
         f.write(";relative within walkacc\t\t\n")
 
-        # Get all walk-to-transit service types
-        walk_services = {}
-        for service in walk_service_mapping.values():
-            vals = extract_values(df_walk_to_transit, purpose, period, f'{service}_', include_veh_categories)
-            walk_services.update(vals)
+        # Walk service types including expanded CRT
+        walk_services = ['wCOR', 'wBRT', 'wLRT', 'wEXP'] + [f'wCRT{i:02d}' for i in range(9)]
 
-        if walk_services:
-            for var, val in sorted(walk_services.items()):
-                f.write(f"  {var:<30}\t=\t{val:.4f}\n")
+        for service in walk_services:
+            for veh_cat in ['0veh', '1veh', '2veh', '3veh', 'all']:
+                include, comment = should_include(service, veh_cat)
+                if include:
+                    df_var_name = f"calib_share_{service.lower()}_{veh_cat}"
+                    # Check with correct case
+                    if df_var_name not in df_walk_to_transit.index:
+                        df_var_name = f"calib_share_{service}_{veh_cat}"
+
+                    if df_var_name in df_walk_to_transit.index and (purpose, period) in df_walk_to_transit.columns:
+                        value = df_walk_to_transit.loc[df_var_name, (purpose, period)]
+                        output_var_name = get_var_name(f"calib_share_{service}", veh_cat)
+                        comment_prefix = ";" if comment else " "
+                        f.write(f"{comment_prefix} {output_var_name:<30}\t=\t{value:.4f}\n")
 
         f.write("\t\t\n")
         f.write("\t\t\n")
 
         # =====================================================================
         # SECTION 9: Drive-to-Transit by Service (within driveacc)
-        # NOTE: This section now includes expanded CRT subclasses (dcrt00, dcrt01, etc.)
+        # Now includes expanded CRT subclasses (dCRT00, dCRT01, etc.)
         # =====================================================================
         f.write(";relative within driveacc\t\t\n")
 
-        # Get all drive-to-transit service types
-        drive_services = {}
-        for service in drive_service_mapping.values():
-            vals = extract_values(df_drive_to_transit, purpose, period, f'{service}_', include_veh_categories)
-            drive_services.update(vals)
+        # Drive service types including expanded CRT
+        drive_services = ['dCOR', 'dBRT', 'dLRT', 'dEXP'] + [f'dCRT{i:02d}' for i in range(9)]
 
-        if drive_services:
-            for var, val in sorted(drive_services.items()):
-                f.write(f"  {var:<30}\t=\t{val:.4f}\n")
+        for service in drive_services:
+            for veh_cat in ['0veh', '1veh', '2veh', '3veh', 'all']:
+                include, comment = should_include(service, veh_cat)
+                if include:
+                    df_var_name = f"calib_share_{service.lower()}_{veh_cat}"
+                    # Check with correct case
+                    if df_var_name not in df_drive_to_transit.index:
+                        df_var_name = f"calib_share_{service}_{veh_cat}"
+
+                    if df_var_name in df_drive_to_transit.index and (purpose, period) in df_drive_to_transit.columns:
+                        value = df_drive_to_transit.loc[df_var_name, (purpose, period)]
+                        output_var_name = get_var_name(f"calib_share_{service}", veh_cat)
+                        comment_prefix = ";" if comment else " "
+                        f.write(f"{comment_prefix} {output_var_name:<30}\t=\t{value:.4f}\n")
 
     print(f"  ✅ Written to {filepath}")
 ```
@@ -1908,18 +2123,26 @@ def export_calib_file(purpose, period, include_veh_categories=True):
 ```{python}
 # Define purposes and their configuration
 export_config = {
-    'HBW':   {'periods': ['PK', 'OK'], 'include_veh': True},
-    'HBO':   {'periods': ['PK', 'OK'], 'include_veh': True},
-    'NHB':   {'periods': ['PK', 'OK'], 'include_veh': True}, # False
-    'HBC':   {'periods': ['Daily'],    'include_veh': True}, # False
-    'HBSch': {'periods': ['Daily'],    'include_veh': True}  # False
+    'HBW':   {'periods': ['PK', 'OK']},
+    'HBO':   {'periods': ['PK', 'OK']},
+    'NHB':   {'periods': ['PK', 'OK']},
+    'HBC':   {'periods': ['Daily']},
+    'HBSch': {'periods': ['Daily']}
 }
 
+# Export all files using global configuration
 for purpose, config in export_config.items():
     for period in config['periods']:
-        export_calib_file(purpose, period, include_veh_categories=config['include_veh'])
+        export_calib_file(
+            purpose,
+            period,
+            export_mode=EXPORT_MODE,
+            remove_all_suffix=REMOVE_ALL_SUFFIX
+        )
 
 print("\n" + "=" * 80)
 print("✅ EXPORT COMPLETE!")
 print("=" * 80)
+print(f"Export mode: {EXPORT_MODE}")
+print(f"Remove _all suffix: {REMOVE_ALL_SUFFIX}")
 ```
