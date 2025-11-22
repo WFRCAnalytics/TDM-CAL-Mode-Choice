@@ -45,7 +45,11 @@ load_dotenv()
 
 ```{python}
 # Export mode control
-EXPORT_MODE = "only_needed"  # Options: "export_all", "comment_unused", "only_needed"
+# Options:
+#   "all"     : Export all variables
+#   "comment" : Export all variables, but comment out the ones not needed
+#   "needed"  : Export only the variables that are needed for TDM
+EXPORT_MODE = "needed"
 
 # Optional suffix removal (when no vehicle disaggregation exists in entire file)
 REMOVE_ALL_SUFFIX = True
@@ -1700,7 +1704,7 @@ def extract_values(df, purpose, period, pattern, include_veh_categories=True):
 ### Export Function
 
 ```{python}
-def export_calib_file(purpose, period, export_mode="only_needed", remove_all_suffix=False):
+def export_calib_file(purpose, period, export_mode="needed", remove_all_suffix=False):
     """
     Export calibration target file for a given purpose and period.
 
@@ -1711,7 +1715,7 @@ def export_calib_file(purpose, period, export_mode="only_needed", remove_all_suf
     period : str
         Time period (PK, OK, Daily)
     export_mode : str
-        Export mode: "export_all", "comment_unused", "only_needed"
+        Export mode: "all", "comment", "needed"
     remove_all_suffix : bool
         Remove _all suffix when no vehicle disaggregation exists in entire file
     """
@@ -1752,7 +1756,7 @@ def export_calib_file(purpose, period, export_mode="only_needed", remove_all_suf
         - comment: whether to prefix with ';'
         """
         # Mode 1: Export everything, no comments
-        if export_mode == "export_all":
+        if export_mode == "all":
             # Exclude 3veh in mode 1 would be incorrect based on user request
             # User said keep 3veh for mode 1
             return (True, False)
@@ -1762,20 +1766,20 @@ def export_calib_file(purpose, period, export_mode="only_needed", remove_all_suf
 
         # For modes 2 and 3, exclude 3veh (it's the base category)
         if veh_cat == '3veh':
-            if export_mode == "only_needed":
+            if export_mode == "needed":
                 return (False, False)  # Don't include at all
-            elif export_mode == "comment_unused":
+            elif export_mode == "comment":
                 return (True, True)  # Include but comment out
 
         # Mode 2: Export all, comment unused
-        if export_mode == "comment_unused":
+        if export_mode == "comment":
             if veh_cat in pattern:
                 return (True, False)  # Include, no comment
             else:
                 return (True, True)   # Include, but commented
 
         # Mode 3: Only needed
-        if export_mode == "only_needed":
+        if export_mode == "needed":
             if veh_cat in pattern:
                 return (True, False)  # Include
             else:
@@ -1841,8 +1845,8 @@ def export_calib_file(purpose, period, export_mode="only_needed", remove_all_suf
         f.write(f";Calibration target values - {purpose} {display_period}\t\t\n")
         f.write("\t\t\n")
 
-        # Write disclaimer - only for export_all and comment_unused modes
-        if export_mode in ["export_all", "comment_unused"]:
+        # Write disclaimer - only for all and comment modes
+        if export_mode in ["all", "comment"]:
             f.write(f";Note: Not all of the variables listed below are used directly in the Mode Choice model. Some are included solely for verification and cross-checking purposes.\t\t\n")
             f.write("\t\t\n")
 
